@@ -47,24 +47,25 @@ class User:
 
 class RegistrProces:
 
-    @staticmethod
-    def mess_wrapper(text, keyboard=None, **kwargs):
-        mess = {'text': text, 'reply_markup': keyboard}
-        return mess.update(kwargs)
+    def mess_wrapper(self, step: int):
+        data = self._prior_messages[step]
+        text = data['text']
+        maker = data.get('kbd_maker')
+        keyboard = maker(self) if maker else None
+        return {'text': text, 'reply_markup': keyboard}
 
     _prior_messages = {
-        2: mess_wrapper(REG_MESSAGE['mess_ask_name']),
-        3: mess_wrapper(REG_MESSAGE['mess_ask_surname']),
-        4: mess_wrapper(
-            REG_MESSAGE['mess_ask_patronymic'],
-            sb.pass_keyboard),
-        5: mess_wrapper(REG_MESSAGE['mess_ask_year']),
-        6: mess_wrapper(
-            REG_MESSAGE['mess_ask_town'],
-            sb.pass_keyboard),
-        7: mess_wrapper(
-            REG_MESSAGE['mess_ask_club'],
-            sb.pass_keyboard),
+        2: {'text': REG_MESSAGE['mess_ask_name']},
+        3: {'text': REG_MESSAGE['mess_ask_surname']},
+        4: {'text': REG_MESSAGE['mess_ask_patronymic'],
+            'kbd_maker': sb.pass_keyboard},
+        5: {'text': REG_MESSAGE['mess_ask_year']},
+        6: {'text': REG_MESSAGE['mess_ask_town'],
+            'kbd_maker': sb.pass_keyboard},
+        7: {'text': REG_MESSAGE['mess_ask_club'],
+            'kbd_maker': sb.pass_keyboard},
+        8: {'text': REG_MESSAGE['mess_ask_category'],
+            'kbd_maker': sb.category_keyboard},
 
     }
 
@@ -87,15 +88,15 @@ class RegistrProces:
 
     def get_race_info(self, race_id) -> List[dict]:
         detail = get_race_detail(race_id)
-        if detail['status'] == '404':
+        if detail['status'] == 404:
             return {'text': REG_MESSAGE['race_not_found']}
-        elif detail['status'] != '200':
+        elif detail['status'] != 200:
             return {'text': REG_MESSAGE['conection_error']}
         self.race = detail['data']
         r = self.race
         self.reg_blank['race'] = r['id']
         self.step = 2
-        mess_ask_name = self._prior_messages[self.step]
+        mess_ask_name = self.mess_wrapper(self.step)
 
         btn_race_detail = InlineKeyboardButton(
             text=REG_BUTTONS['race_detail'],
@@ -114,7 +115,7 @@ class RegistrProces:
             self.step = 3
         else:
             self.step = self._fix_list.pop(0)
-        mess = self._prior_messages[self.step]
+        mess = self.mess_wrapper(self.step)
         return (mess, )
 
     def set_surname(self, data: str):
@@ -124,7 +125,7 @@ class RegistrProces:
             self.step = 4
         else:
             self.step = self._fix_list.pop(0)
-        mess = self._prior_messages[self.step]
+        mess = self.mess_wrapper(self.step)
         return (mess, )
 
     def set_patronymic(self, data: str):
@@ -134,7 +135,7 @@ class RegistrProces:
             self.step = 5
         else:
             self.step = self._fix_list.pop(0)
-        mess = self._prior_messages[self.step]
+        mess = self.mess_wrapper(self.step)
         return (mess, )
 
     def set_year(self, data):
@@ -144,7 +145,7 @@ class RegistrProces:
             self.step = 6
         else:
             self.step = self._fix_list.pop(0)
-        mess = self._prior_messages[self.step]
+        mess = self.mess_wrapper(self.step)
         return (mess, )
 
     def set_town(self, data):
@@ -154,7 +155,7 @@ class RegistrProces:
             self.step = 7
         else:
             self.step = self._fix_list.pop(0)
-        mess = self._prior_messages[self.step]
+        mess = self.mess_wrapper(self.step)
         return (mess, )
 
     def set_club(self, data):
@@ -164,11 +165,21 @@ class RegistrProces:
             self.step = 8
         else:
             self.step = self._fix_list.pop(0)
-        mess = self._prior_messages[self.step]
+        mess = self.mess_wrapper(self.step)
         return (mess, )
 
     def set_category(self, data):
-        pass
+        category_ids = [cat.id for cat in self.race['categories']]
+        if data not in category_ids:
+            return {'text': REG_MESSAGE['category_not_found']}
+        category = data.strip()
+        self.reg_blank['category'] = category
+        if not self._fix_list:
+            self.step = 9
+        else:
+            self.step = self._fix_list.pop(0)
+        mess = self.mess_wrapper(self.step)
+        return (mess, )
 
     def set_number(self, data):
         pass

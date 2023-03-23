@@ -3,7 +3,9 @@ def get_races():
 
 
 def get_race_detail(race_id):
-    pass
+    status = 404
+    data = None
+    return {'status': status, 'data': data}
 
 
 def send_registration(data):
