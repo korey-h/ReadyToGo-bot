@@ -1,10 +1,9 @@
+import json
 from typing import List
 
-from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
-
 from . import static_buttons as sb
-from .api_handlers import get_race_detail
-from .config import REG_BUTTONS, REG_MESSAGE
+from .api_handlers import get_race_detail, send_registration
+from .config import REG_MESSAGE
 
 
 class User:
@@ -47,28 +46,6 @@ class User:
 
 class RegistrProces:
 
-    def mess_wrapper(self, step: int):
-        data = self._prior_messages[step]
-        text = data['text']
-        maker = data.get('kbd_maker')
-        keyboard = maker(self) if maker else None
-        return {'text': text, 'reply_markup': keyboard}
-
-    _prior_messages = {
-        2: {'text': REG_MESSAGE['mess_ask_name']},
-        3: {'text': REG_MESSAGE['mess_ask_surname']},
-        4: {'text': REG_MESSAGE['mess_ask_patronymic'],
-            'kbd_maker': sb.pass_keyboard},
-        5: {'text': REG_MESSAGE['mess_ask_year']},
-        6: {'text': REG_MESSAGE['mess_ask_town'],
-            'kbd_maker': sb.pass_keyboard},
-        7: {'text': REG_MESSAGE['mess_ask_club'],
-            'kbd_maker': sb.pass_keyboard},
-        8: {'text': REG_MESSAGE['mess_ask_category'],
-            'kbd_maker': sb.category_keyboard},
-
-    }
-
     def __init__(self) -> None:
         self.step = 1
         self.race = None
@@ -86,116 +63,139 @@ class RegistrProces:
             'town': ''
         }
 
-    def get_race_info(self, race_id) -> List[dict]:
-        detail = get_race_detail(race_id)
-        if detail['status'] == 404:
-            return {'text': REG_MESSAGE['race_not_found']}
-        elif detail['status'] != 200:
-            return {'text': REG_MESSAGE['conection_error']}
-        self.race = detail['data']
-        r = self.race
-        self.reg_blank['race'] = r['id']
-        self.step = 2
-        mess_ask_name = self.mess_wrapper(self.step)
+    _stop_text = 'to registration'
+    _finish_step = 10
+    _prior_messages = {
+        1: {'text': REG_MESSAGE['mess_ask_race']},
+        2: {'text': REG_MESSAGE['mess_ask_name'],
+            'kbd_maker': sb.race_detail_button},
+        3: {'text': REG_MESSAGE['mess_ask_surname']},
+        4: {'text': REG_MESSAGE['mess_ask_patronymic'],
+            'kbd_maker': sb.pass_keyboard},
+        5: {'text': REG_MESSAGE['mess_ask_year']},
+        6: {'text': REG_MESSAGE['mess_ask_town'],
+            'kbd_maker': sb.pass_keyboard},
+        7: {'text': REG_MESSAGE['mess_ask_club'],
+            'kbd_maker': sb.pass_keyboard},
+        8: {'text': REG_MESSAGE['mess_ask_category'],
+            'kbd_maker': sb.category_keyboard},
+        9: {'text': REG_MESSAGE['mess_ask_number']},
+        10: {'text': _stop_text},
+    }
 
-        btn_race_detail = InlineKeyboardButton(
-            text=REG_BUTTONS['race_detail'],
-            callback_data=f'race_detai:{r["id"]}')
-        keyboard = InlineKeyboardMarkup().add(btn_race_detail)
-        mess_about = self.mess_wrapper(
-            f'{r["name"]}, {r["date"]}',
-            keyboard)
+    def _get_action(self, step: int):
+        step_actions = {
+            1: {'name': 'race', 'required': True},
+            2: {'name': 'name', 'required': True},
+            3: {'name': 'surname', 'required': True},
+            4: {'name': 'patronymic', 'required': False},
+            5: {'name': 'year', 'required': True},
+            6: {'name': 'town', 'required': False},
+            7: {'name': 'club', 'required': False},
+            8: {'name': 'category', 'required': True},
+            9: {'name': 'number', 'required': True},
+            10: {'name': 'registration', 'required': True},
+        }
+        return step_actions[step]
 
-        return (mess_about, mess_ask_name)
+    def _get_validator(self, step: int):
+        validators = {
+            1: self._race_setter,
+            2: self._clipper,
+            3: self._clipper,
+            4: self._clipper,
+            5: self._to_integer,
+            6: self._clipper,
+            7: self._clipper,
+            8: self._to_category,
+            9: self._to_integer,
+        }
+        return validators[step]
 
-    def set_name(self, data: str):
-        name = data.strip()
-        self.reg_blank['name'] = name
-        if not self._fix_list:
-            self.step = 3
-        else:
-            self.step = self._fix_list.pop(0)
-        mess = self.mess_wrapper(self.step)
-        return (mess, )
+    def is_act_required(self):
+        act = self._get_action(self.step)
+        return act['required']
 
-    def set_surname(self, data: str):
-        surname = data.strip()
-        self.reg_blank['surname'] = surname
-        if not self._fix_list:
-            self.step = 4
-        else:
-            self.step = self._fix_list.pop(0)
-        mess = self.mess_wrapper(self.step)
-        return (mess, )
+    def step_handler(self, data) -> List[dict]:
+        validator = self._get_validator(self.step)
+        res = validator(data)
+        if res['error']:
+            return self.mess_wrapper(res['error'])
 
-    def set_patronymic(self, data: str):
-        patronymic = data.strip()
-        self.reg_blank['patronymic'] = patronymic
-        if not self._fix_list:
-            self.step = 5
-        else:
-            self.step = self._fix_list.pop(0)
-        mess = self.mess_wrapper(self.step)
-        return (mess, )
+        entry = self._get_action(self.step)['name']
+        self.reg_blank[entry] = data
+        self.step += 1
+        return self.mess_wrapper(self.step)
 
-    def set_year(self, data):
-        year = data.strip()
-        self.reg_blank['year'] = year
-        if not self._fix_list:
-            self.step = 6
-        else:
-            self.step = self._fix_list.pop(0)
-        mess = self.mess_wrapper(self.step)
-        return (mess, )
-
-    def set_town(self, data):
-        town = data.strip()
-        self.reg_blank['town'] = town
-        if not self._fix_list:
-            self.step = 7
-        else:
-            self.step = self._fix_list.pop(0)
-        mess = self.mess_wrapper(self.step)
-        return (mess, )
-
-    def set_club(self, data):
-        club = data.strip()
-        self.reg_blank['town'] = club
-        if not self._fix_list:
-            self.step = 8
-        else:
-            self.step = self._fix_list.pop(0)
-        mess = self.mess_wrapper(self.step)
-        return (mess, )
-
-    def set_category(self, data):
-        category_ids = [cat.id for cat in self.race['categories']]
-        if data not in category_ids:
-            return {'text': REG_MESSAGE['category_not_found']}
-        category = data.strip()
-        self.reg_blank['category'] = category
-        if not self._fix_list:
-            self.step = 9
-        else:
-            self.step = self._fix_list.pop(0)
-        mess = self.mess_wrapper(self.step)
-        return (mess, )
-
-    def set_number(self, data):
-        pass
+    def exec(self, data):
+        res = self.step_handler(self, data)
+        if self.step == self._finish_step:
+            return self.make_registration()
+        return res
 
     def make_registration(self):
-        pass
+        res = send_registration(self.reg_blank)
+        if res['status'] == 200:
+            r = self.race
+            bl = self.reg_blank
+            cat_names = {c['id']: c['name'] for c in r['categories']}
 
-    __step_actions__ = {
-        1: {'handler': get_race_info, 'required': True},
-        2: {'handler': set_name, 'required': True},
-        3: {'handler': set_surname, 'required': True},
-        4: {'handler': set_patronymic, 'required': False},
-        5: {'handler': set_year, 'required': True},
-        6: {'handler': set_town, 'required': False},
-        7: {'handler': set_club, 'required': False},
-        8: {'handler': set_category, 'required': True},
-        9: {'handler': set_number, 'required': True},
-        10: {'handler': make_registration, 'required': True},
-    }
+            text = f'{r["name"]}, категория "{cat_names[bl["category"]]}",'\
+                   f'номер {bl["number"]}, {bl["name"]} {bl["patronymic"]}'\
+                   f' {bl["surname"]}, {bl["year"]} г.р.'
+            return self.mess_wrapper({'text': text})
+        elif res['status'] == 400:
+
+            pass
+        elif res['status'] == 500:
+            return self.mess_wrapper(
+                {'text': REG_MESSAGE['conection_error']})
+        return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
+
+    def mess_wrapper(self, step: int):
+        data = self._prior_messages[step]
+        text = data['text']
+        maker = data.get('kbd_maker')
+        keyboard = maker(self) if maker else None
+        return {'text': text, 'reply_markup': keyboard}
+
+    def _clipper(self, data) -> dict:
+        data = data.strip()
+        return {'data': data, 'error': None}
+
+    def _to_integer(self, data) -> dict:
+        data = data.strip()
+        message = None
+        try:
+            data = int(data)
+        except Exception:
+            data = None
+            message = REG_MESSAGE['not_integer']
+        return {'data': data, 'error': message}
+
+    def _to_category(self, data) -> dict:
+        data = data.strip()
+        message = None
+        try:
+            data = json.loads(data)
+        except Exception:
+            data = None
+            message = REG_MESSAGE['not_category']
+            return {'data': data, 'error': message}
+        category_id = data.get('category_id')
+        if not category_id:
+            return {'data': category_id,
+                    'error': REG_MESSAGE['no_category_data']}
+
+        return {'data': category_id, 'error': None}
+
+    def _race_setter(self, data) -> dict:
+        detail = get_race_detail(data)
+        if detail['status'] == 404:
+            return {'data': None,
+                    'error': REG_MESSAGE['race_not_found']}
+        elif detail['status'] != 200:
+            return {'data': None,
+                    'error': REG_MESSAGE['conection_error']}
+        self.race = detail['data']
+        return {'data': self.race['id'], 'error': None}

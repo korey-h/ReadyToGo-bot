@@ -24,3 +24,11 @@ def category_keyboard(obj):
         button = InlineKeyboardButton(text=text, callback_data=callback_data)
         buttons.append(button)
     return InlineKeyboardMarkup(row_width=1).add(*buttons)
+
+
+def race_detail_button(obj):
+    r = obj.race
+    btn_race_detail = InlineKeyboardButton(
+        text=REG_BUTTONS['race_detail'],
+        callback_data=f'race_detai:{r["id"]}')
+    return InlineKeyboardMarkup().add(btn_race_detail)

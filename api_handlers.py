@@ -9,7 +9,9 @@ def get_race_detail(race_id):
 
 
 def send_registration(data):
-    pass
+    status = 200
+    data = data
+    return {'status': status, 'data': data}
 
 
 def upd_registration(data):
