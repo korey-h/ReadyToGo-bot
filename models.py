@@ -49,7 +49,7 @@ class RegistrProces:
     def __init__(self) -> None:
         self.step = 1
         self.race = None
-        self.error = None
+        self.errors = {}
         self._fix_list = []
         self.reg_blank = {
             'race': None,
@@ -83,20 +83,26 @@ class RegistrProces:
         10: {'text': _stop_text},
     }
 
-    def _get_action(self, step: int):
-        step_actions = {
-            1: {'name': 'race', 'required': True},
-            2: {'name': 'name', 'required': True},
-            3: {'name': 'surname', 'required': True},
-            4: {'name': 'patronymic', 'required': False},
-            5: {'name': 'year', 'required': True},
-            6: {'name': 'town', 'required': False},
-            7: {'name': 'club', 'required': False},
-            8: {'name': 'category', 'required': True},
-            9: {'name': 'number', 'required': True},
-            10: {'name': 'registration', 'required': True},
+    _step_actions = {
+        1: {'name': 'race', 'required': True},
+        2: {'name': 'name', 'required': True},
+        3: {'name': 'surname', 'required': True},
+        4: {'name': 'patronymic', 'required': False},
+        5: {'name': 'year', 'required': True},
+        6: {'name': 'town', 'required': False},
+        7: {'name': 'club', 'required': False},
+        8: {'name': 'category', 'required': True},
+        9: {'name': 'number', 'required': True},
+        10: {'name': 'registration', 'required': True},
+    }
+
+    def _get_action(self, step: int) -> dict:
+        return self._step_actions[step]
+
+    def _get_step_names(self) -> dict:
+        return {
+            val['name']: st for st, val in self._step_actions.items()
         }
-        return step_actions[step]
 
     def _get_validator(self, step: int):
         validators = {
@@ -140,16 +146,29 @@ class RegistrProces:
             bl = self.reg_blank
             cat_names = {c['id']: c['name'] for c in r['categories']}
 
-            text = f'{r["name"]}, категория "{cat_names[bl["category"]]}",'\
-                   f'номер {bl["number"]}, {bl["name"]} {bl["patronymic"]}'\
-                   f' {bl["surname"]}, {bl["year"]} г.р.'
+            text = (f'{r["name"]}, категория "{cat_names[bl["category"]]}",'
+                    f'номер {bl["number"]}, {bl["name"]} {bl["patronymic"]}'
+                    f' {bl["surname"]}, {bl["year"]} г.р.')
             return self.mess_wrapper({'text': text})
-        elif res['status'] == 400:
 
-            pass
+        elif res['status'] == 400:
+            names_w_err = res['data']
+            step_names = self._get_step_names()
+            for name, err in names_w_err.items():
+                step = step_names[name]
+                self._fix_list.append(step)
+                self.errors[step] = err
+            self._fix_list.append(self._finish_step)
+            self._fix_list.reverse()
+            next_step = self._fix_list[-1]
+            text = (self.errors[next_step] + '\n' +
+                    self._prior_messages[next_step]['text'])
+            return {'text': text}
+
         elif res['status'] == 500:
             return self.mess_wrapper(
                 {'text': REG_MESSAGE['conection_error']})
+
         return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
 
     def mess_wrapper(self, step: int):
