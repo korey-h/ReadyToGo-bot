@@ -1,9 +1,10 @@
 import json
 from typing import List
 
-from . import static_buttons as sb
-from .api_handlers import get_race_detail, send_registration
-from .config import REG_MESSAGE
+import static_buttons as sb
+
+from api_handlers import get_race_detail, send_registration
+from config import REG_MESSAGE
 
 
 class User:
@@ -47,8 +48,10 @@ class User:
 class RegistrProces:
 
     def __init__(self) -> None:
-        self.step = 1
+        self.step = 0
         self.race = None
+        self.id = None
+        self.is_active = True
         self.errors = {}
         self._fix_list = []
         self.reg_blank = {
@@ -63,6 +66,8 @@ class RegistrProces:
             'town': ''
         }
 
+    race_detail_getter = get_race_detail
+    reg_sender = send_registration
     _stop_text = 'to registration'
     _finish_step = 10
     _prior_messages = {
@@ -97,7 +102,7 @@ class RegistrProces:
     }
 
     def _get_action(self, step: int) -> dict:
-        return self._step_actions[step]
+        return self._step_actions.get(step)
 
     def _get_step_names(self) -> dict:
         return {
@@ -116,7 +121,7 @@ class RegistrProces:
             8: self._to_category,
             9: self._to_integer,
         }
-        return validators[step]
+        return validators.get(step)
 
     def is_act_required(self):
         act = self._get_action(self.step)
@@ -124,32 +129,40 @@ class RegistrProces:
 
     def step_handler(self, data) -> List[dict]:
         validator = self._get_validator(self.step)
-        res = validator(data)
-        if res['error']:
-            return self.mess_wrapper(res['error'])
+        if validator:
+            res = validator(data)
+            if res['error']:
+                return self.mess_wrapper(res['error'])
+            data = res['data']
 
-        entry = self._get_action(self.step)['name']
-        self.reg_blank[entry] = data
-        self.step += 1
+        act = self._get_action(self.step)
+        if act:
+            entry = act['name']
+            self.reg_blank[entry] = data
+        if not self._fix_list:
+            self.step += 1
+        else:
+            self.step = self._fix_list.pop()
         return self.mess_wrapper(self.step)
 
     def exec(self, data):
-        res = self.step_handler(self, data)
+        res = self.step_handler(data)
         if self.step == self._finish_step:
             return self.make_registration()
         return res
 
     def make_registration(self):
-        res = send_registration(self.reg_blank)
+        res = self.reg_sender(self.reg_blank)
         if res['status'] == 200:
+            self.id = res['data']['id']
+            self.is_active = False
             r = self.race
             bl = self.reg_blank
             cat_names = {c['id']: c['name'] for c in r['categories']}
-
-            text = (f'{r["name"]}, категория "{cat_names[bl["category"]]}",'
+            text = (f'{r["name"]}, категория "{cat_names[bl["category"]]}", '
                     f'номер {bl["number"]}, {bl["name"]} {bl["patronymic"]}'
                     f' {bl["surname"]}, {bl["year"]} г.р.')
-            return self.mess_wrapper({'text': text})
+            return self.mess_wrapper(text)
 
         elif res['status'] == 400:
             names_w_err = res['data']
@@ -160,10 +173,10 @@ class RegistrProces:
                 self.errors[step] = err
             self._fix_list.append(self._finish_step)
             self._fix_list.reverse()
-            next_step = self._fix_list[-1]
-            text = (self.errors[next_step] + '\n' +
-                    self._prior_messages[next_step]['text'])
-            return {'text': text}
+            self.step = self._fix_list.pop()
+            text = (self.errors[self.step] + '\n' +
+                    self._prior_messages[self.step]['text'])
+            return self.mess_wrapper(text)
 
         elif res['status'] == 500:
             return self.mess_wrapper(
@@ -171,8 +184,10 @@ class RegistrProces:
 
         return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
 
-    def mess_wrapper(self, step: int):
-        data = self._prior_messages[step]
+    def mess_wrapper(self, value):
+        if not isinstance(value, int):
+            return {'text': value}
+        data = self._prior_messages[value]
         text = data['text']
         maker = data.get('kbd_maker')
         keyboard = maker(self) if maker else None
@@ -194,22 +209,25 @@ class RegistrProces:
 
     def _to_category(self, data) -> dict:
         data = data.strip()
-        message = None
         try:
             data = json.loads(data)
         except Exception:
-            data = None
-            message = REG_MESSAGE['not_category']
-            return {'data': data, 'error': message}
+            return {'data': None,
+                    'error': REG_MESSAGE['not_category']}
+        if not isinstance(data, dict):
+            return {'data': None,
+                    'error': REG_MESSAGE['not_dict']}
         category_id = data.get('category_id')
-        if not category_id:
+        categories = self.race['categories']
+        if (category_id is None or
+                category_id not in [cat['id'] for cat in categories]):
             return {'data': category_id,
                     'error': REG_MESSAGE['no_category_data']}
 
         return {'data': category_id, 'error': None}
 
     def _race_setter(self, data) -> dict:
-        detail = get_race_detail(data)
+        detail = self.race_detail_getter(data)
         if detail['status'] == 404:
             return {'data': None,
                     'error': REG_MESSAGE['race_not_found']}

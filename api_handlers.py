@@ -3,7 +3,7 @@ def get_races():
 
 
 def get_race_detail(race_id):
-    status = 404
+    status = 200
     data = None
     return {'status': status, 'data': data}
 

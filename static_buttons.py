@@ -2,7 +2,7 @@ import json
 
 from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from .config import REG_BUTTONS
+from config import REG_BUTTONS
 
 
 def pass_keyboard(obj):
