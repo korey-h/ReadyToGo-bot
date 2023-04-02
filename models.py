@@ -127,6 +127,12 @@ class RegistrProces:
         act = self._get_action(self.step)
         return act['required']
 
+    def pass_step(self):
+        if self.is_act_required():
+            return self.mess_wrapper(REG_MESSAGE['step_is_required'])
+        self.step += 1
+        return self.mess_wrapper(self.step)
+
     def step_handler(self, data) -> List[dict]:
         validator = self._get_validator(self.step)
         if validator:
@@ -154,15 +160,17 @@ class RegistrProces:
     def make_registration(self):
         res = self.reg_sender(self.reg_blank)
         if res['status'] == 200:
-            self.id = res['data']['id']
+            self.id = res['data']['reg_code']
             self.is_active = False
             r = self.race
             bl = self.reg_blank
             cat_names = {c['id']: c['name'] for c in r['categories']}
             text = (f'{r["name"]}, категория "{cat_names[bl["category"]]}", '
                     f'номер {bl["number"]}, {bl["name"]} {bl["patronymic"]}'
-                    f' {bl["surname"]}, {bl["year"]} г.р.')
-            return self.mess_wrapper(text)
+                    f' {bl["surname"]}, {bl["year"]} г.р., \n'
+                    f'номер заявки {self.id}')
+            keyboard = sb.reg_update_button(self)
+            return self.mess_wrapper([text, keyboard])
 
         elif res['status'] == 400:
             names_w_err = res['data']
@@ -185,12 +193,18 @@ class RegistrProces:
         return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
 
     def mess_wrapper(self, value):
-        if not isinstance(value, int):
-            return {'text': value}
-        data = self._prior_messages[value]
-        text = data['text']
-        maker = data.get('kbd_maker')
-        keyboard = maker(self) if maker else None
+        keyboard = None
+        text = None
+        if isinstance(value, str):
+            text = value
+        elif isinstance(value, int):
+            data = self._prior_messages[value]
+            text = data['text']
+            maker = data.get('kbd_maker')
+            keyboard = maker(self) if maker else None
+        elif isinstance(value, (list, tuple)):
+            text = value[0]
+            keyboard = value[1]
         return {'text': text, 'reply_markup': keyboard}
 
     def _clipper(self, data) -> dict:

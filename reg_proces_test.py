@@ -27,7 +27,7 @@ def test_race_detail(race_id):
 def test_reg_send(data):
     status = 200
     data = data
-    data['id'] = 101
+    data['reg_code'] = 'bl-101'
     if data['number'] <= 0:
         status = 400
         data = {
@@ -39,7 +39,9 @@ def test_reg_send(data):
 scena = [
     '1',
     'sRaser',
+    None,
     'Big',
+    None,
     'Wheel',
     'year',
     '2000',
@@ -58,7 +60,10 @@ registrator.reg_sender = test_reg_send
 message = registrator.exec('race_id')
 for data in scena:
     print(str(message) + '-> ' + str(data))
-    message = registrator.exec(data)
+    if data is None:
+        message = registrator.pass_step()
+    else:
+        message = registrator.exec(data)
     if not registrator.is_active:
         print(str(message))
         break

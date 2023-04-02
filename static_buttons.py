@@ -30,5 +30,15 @@ def race_detail_button(obj):
     r = obj.race
     btn_race_detail = InlineKeyboardButton(
         text=REG_BUTTONS['race_detail'],
-        callback_data=f'race_detai:{r["id"]}')
+        callback_data=json.dumps({'race_detail': r["id"]})
+        )
     return InlineKeyboardMarkup().add(btn_race_detail)
+
+
+def reg_update_button(obj):
+    reg_code = obj.id
+    btn_reg_update = InlineKeyboardButton(
+        text=REG_BUTTONS['reg_update'],
+        callback_data=json.dumps({'reg_update': reg_code})
+        )
+    return InlineKeyboardMarkup().add(btn_reg_update)
