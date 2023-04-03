@@ -7,44 +7,6 @@ from api_handlers import get_race_detail, send_registration
 from config import REG_MESSAGE
 
 
-class User:
-    def __init__(self, id):
-        self.id = id
-        self._commands = []
-
-    def get_cmd_stack(self):
-        if len(self._commands) > 0:
-            return self._commands[-1]
-        return []
-
-    def set_cmd_stack(self, cmd_stack):
-        if isinstance(cmd_stack, dict):
-            self._commands.append(cmd_stack)
-        else:
-            keys = ('cmd_name', 'cmd', 'data', 'called_by')
-            if isinstance(cmd_stack, (list, tuple)):
-                s = tuple(cmd_stack)
-                keys_am = len(keys)
-                values = s[:keys_am] if len(s) >= keys_am else (
-                    s + tuple(None for _ in range(keys_am - len(s)))
-                    )
-            else:
-                values = (cmd_stack, cmd_stack, {}, None)
-            self._commands.append(
-                {key: val for key, val in zip(keys, values)}
-            )
-
-    cmd_stack = property(get_cmd_stack, set_cmd_stack)
-
-    def clear_stack(self):
-        self._commands.clear()
-
-    def cmd_stack_pop(self):
-        if len(self._commands) > 0:
-            return self._commands.pop()
-        return None
-
-
 class RegistrProces:
 
     def __init__(self) -> None:
@@ -133,25 +95,31 @@ class RegistrProces:
         self.step += 1
         return self.mess_wrapper(self.step)
 
-    def step_handler(self, data) -> List[dict]:
-        validator = self._get_validator(self.step)
-        if validator:
-            res = validator(data)
-            if res['error']:
-                return self.mess_wrapper(res['error'])
-            data = res['data']
+    def repeat_last_step(self):
+        if self.step > 0:
+            self.step -= 1
+        return self.exec()
 
-        act = self._get_action(self.step)
-        if act:
-            entry = act['name']
-            self.reg_blank[entry] = data
+    def step_handler(self, data) -> List[dict]:
+        if data is not None:
+            validator = self._get_validator(self.step)
+            if validator:
+                res = validator(data)
+                if res['error']:
+                    return self.mess_wrapper(res['error'])
+                data = res['data']
+
+            act = self._get_action(self.step)
+            if act:
+                entry = act['name']
+                self.reg_blank[entry] = data
         if not self._fix_list:
             self.step += 1
         else:
             self.step = self._fix_list.pop()
         return self.mess_wrapper(self.step)
 
-    def exec(self, data):
+    def exec(self, data=None):
         res = self.step_handler(data)
         if self.step == self._finish_step:
             return self.make_registration()
@@ -167,8 +135,8 @@ class RegistrProces:
             cat_names = {c['id']: c['name'] for c in r['categories']}
             text = (f'{r["name"]}, категория "{cat_names[bl["category"]]}", '
                     f'номер {bl["number"]}, {bl["name"]} {bl["patronymic"]}'
-                    f' {bl["surname"]}, {bl["year"]} г.р., \n'
-                    f'номер заявки {self.id}')
+                    f' {bl["surname"]}, {bl["year"]} г.р., {bl["town"]}.\n'
+                    f'Номер заявки {self.id}')
             keyboard = sb.reg_update_button(self)
             return self.mess_wrapper([text, keyboard])
 
@@ -250,3 +218,52 @@ class RegistrProces:
                     'error': REG_MESSAGE['conection_error']}
         self.race = detail['data']
         return {'data': self.race['id'], 'error': None}
+
+
+class User:
+    reg_proces_class = RegistrProces
+
+    def __init__(self, id):
+        self.id = id
+        self._commands = []
+        self.reg_proces = None
+
+    def get_cmd_stack(self):
+        if len(self._commands) > 0:
+            return self._commands[-1]
+        return []
+
+    def set_cmd_stack(self, cmd_stack):
+        if isinstance(cmd_stack, dict):
+            self._commands.append(cmd_stack)
+        else:
+            keys = ('cmd_name', 'cmd', 'data', 'called_by')
+            if isinstance(cmd_stack, (list, tuple)):
+                s = tuple(cmd_stack)
+                keys_am = len(keys)
+                values = s[:keys_am] if len(s) >= keys_am else (
+                    s + tuple(None for _ in range(keys_am - len(s)))
+                    )
+            else:
+                values = (cmd_stack, cmd_stack, {}, None)
+            self._commands.append(
+                {key: val for key, val in zip(keys, values)}
+            )
+
+    cmd_stack = property(get_cmd_stack, set_cmd_stack)
+
+    def clear_stack(self):
+        self._commands.clear()
+
+    def cmd_stack_pop(self):
+        if len(self._commands) > 0:
+            return self._commands.pop()
+        return None
+
+    def start_registration(self):
+        self.reg_proces = self.reg_proces_class()
+        return None
+
+    def stop_registration(self):
+        self.reg_proces = None
+        return None

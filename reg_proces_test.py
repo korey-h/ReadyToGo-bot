@@ -16,7 +16,7 @@ def test_race_detail(race_id):
         "is_active": True,
         "categories": [
           {
-            "id": 0,
+            "id": 10,
             "name": "Любители"
           }
         ]
@@ -45,9 +45,10 @@ scena = [
     'Wheel',
     'year',
     '2000',
+    'repeat',
     'City',
     'Self',
-    '{"category_id": 0}',
+    '{"category_id": 10}',
     '-1',
     '2',
     'Racer',
@@ -62,6 +63,8 @@ for data in scena:
     print(str(message) + '-> ' + str(data))
     if data is None:
         message = registrator.pass_step()
+    elif data == 'repeat':
+        message = registrator.repeat_last_step()
     else:
         message = registrator.exec(data)
     if not registrator.is_active:

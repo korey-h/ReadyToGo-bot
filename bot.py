@@ -62,8 +62,23 @@ def about(message):
 
 @bot.message_handler(commands=[BUTTONS['btn_make_registr']])
 def registration(message, *args, **kwargs):
+    '''Регистрация на мероприятие'''
+
+    self_name = 'registration'
     user = get_user(message)
-    bot.send_message(user.id, 'Здесь всё будет!')
+    cmd = user.get_cmd_stack()
+    if cmd and cmd['name'] != self_name:
+        text = MESSAGES['no_finished_commands'] % (cmd.__doc__)
+        bot.send_message(user.id, text=text)
+
+    data = kwargs['data']
+    if not user.reg_proces:
+        user.start_registration()
+        user.set_cmd_stack((self_name, registration))
+    context = user.reg_proces.exec(data)
+    if not user.reg_proces.is_active:
+        user.stop_registration()
+    bot.send_message(user.id, **context)
 
 
 @bot.message_handler(content_types=["text"])
