@@ -14,7 +14,7 @@ def test_race_detail(race_id):
         "town": "Дефолтсити",
         "description": "string",
         "is_active": True,
-        "categories": [
+        "race_categories": [
           {
             "id": 10,
             "name": "Любители"
@@ -37,6 +37,7 @@ def test_reg_send(data):
 
 
 scena = [
+    'one',
     '1',
     'sRaser',
     None,
@@ -48,7 +49,7 @@ scena = [
     'repeat',
     'City',
     'Self',
-    '{"category_id": 10}',
+    '{"cat_id": 10}',
     '-1',
     '2',
     'Racer',

@@ -1,4 +1,3 @@
-import json
 from typing import List
 
 import static_buttons as sb
@@ -16,6 +15,8 @@ class RegistrProces:
         self.is_active = True
         self.errors = {}
         self._fix_list = []
+        self.race_detail_getter = get_race_detail
+        self.reg_sender = send_registration
         self.reg_blank = {
             'race': None,
             'category': None,
@@ -28,8 +29,6 @@ class RegistrProces:
             'town': ''
         }
 
-    race_detail_getter = get_race_detail
-    reg_sender = send_registration
     _stop_text = 'to registration'
     _finish_step = 10
     _prior_messages = {
@@ -127,12 +126,12 @@ class RegistrProces:
 
     def make_registration(self):
         res = self.reg_sender(self.reg_blank)
-        if res['status'] == 200:
+        if res['status'] == 201:
             self.id = res['data']['reg_code']
             self.is_active = False
             r = self.race
             bl = self.reg_blank
-            cat_names = {c['id']: c['name'] for c in r['categories']}
+            cat_names = {c['id']: c['name'] for c in r['race_categories']}
             text = (f'{r["name"]}, категория "{cat_names[bl["category"]]}", '
                     f'номер {bl["number"]}, {bl["name"]} {bl["patronymic"]}'
                     f' {bl["surname"]}, {bl["year"]} г.р., {bl["town"]}.\n'
@@ -143,18 +142,18 @@ class RegistrProces:
         elif res['status'] == 400:
             names_w_err = res['data']
             step_names = self._get_step_names()
-            for name, err in names_w_err.items():
+            for name, errs in names_w_err.items():
                 step = step_names[name]
                 self._fix_list.append(step)
-                self.errors[step] = err
+                self.errors[step] = ';'.join(errs)
             self._fix_list.append(self._finish_step)
             self._fix_list.reverse()
             self.step = self._fix_list.pop()
-            text = (self.errors[self.step] + '\n' +
-                    self._prior_messages[self.step]['text'])
+            text = (self._prior_messages[self.step]['text'] + '\n' +
+                    self.errors[self.step])
             return self.mess_wrapper(text)
 
-        elif res['status'] == 500:
+        elif res['status'] in range(500, 600):
             return self.mess_wrapper(
                 {'text': REG_MESSAGE['conection_error']})
 
@@ -175,11 +174,11 @@ class RegistrProces:
             keyboard = value[1]
         return {'text': text, 'reply_markup': keyboard}
 
-    def _clipper(self, data) -> dict:
+    def _clipper(self, data: str) -> dict:
         data = data.strip()
         return {'data': data, 'error': None}
 
-    def _to_integer(self, data) -> dict:
+    def _to_integer(self, data: str) -> dict:
         data = data.strip()
         message = None
         try:
@@ -189,18 +188,12 @@ class RegistrProces:
             message = REG_MESSAGE['not_integer']
         return {'data': data, 'error': message}
 
-    def _to_category(self, data) -> dict:
-        data = data.strip()
-        try:
-            data = json.loads(data)
-        except Exception:
-            return {'data': None,
-                    'error': REG_MESSAGE['not_category']}
+    def _to_category(self, data: dict) -> dict:
         if not isinstance(data, dict):
             return {'data': None,
                     'error': REG_MESSAGE['not_dict']}
-        category_id = data.get('category_id')
-        categories = self.race['categories']
+        category_id = data.get('cat_id')
+        categories = self.race['race_categories']
         if (category_id is None or
                 category_id not in [cat['id'] for cat in categories]):
             return {'data': category_id,
@@ -209,6 +202,10 @@ class RegistrProces:
         return {'data': category_id, 'error': None}
 
     def _race_setter(self, data) -> dict:
+        res = self._to_integer(data)
+        if res['error']:
+            return res
+        data = res['data']
         detail = self.race_detail_getter(data)
         if detail['status'] == 404:
             return {'data': None,
@@ -227,6 +224,9 @@ class User:
         self.id = id
         self._commands = []
         self.reg_proces = None
+
+    def is_stack_empty(self):
+        return len(self._commands) == 0
 
     def get_cmd_stack(self):
         if len(self._commands) > 0:
