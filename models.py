@@ -1,8 +1,7 @@
-from typing import List
-
 import static_buttons as sb
 
-from api_handlers import get_race_detail, send_registration
+from api_handlers import (
+    get_race_detail, race_detail_handler, send_registration)
 from config import REG_MESSAGE
 
 
@@ -16,6 +15,7 @@ class RegistrProces:
         self.errors = {}
         self._fix_list = []
         self.race_detail_getter = get_race_detail
+        self.race_detail_handler = race_detail_handler
         self.reg_sender = send_registration
         self.reg_blank = {
             'race': None,
@@ -32,7 +32,8 @@ class RegistrProces:
     _stop_text = 'to registration'
     _finish_step = 10
     _prior_messages = {
-        1: {'text': REG_MESSAGE['mess_ask_race']},
+        1: {'text': REG_MESSAGE['mess_ask_race'],
+            'kbd_maker': sb.cancel_this_kbd},
         2: {'text': REG_MESSAGE['mess_ask_name'],
             'kbd_maker': sb.race_detail_button},
         3: {'text': REG_MESSAGE['mess_ask_surname']},
@@ -99,7 +100,7 @@ class RegistrProces:
             self.step -= 1
         return self.exec()
 
-    def step_handler(self, data) -> List[dict]:
+    def step_handler(self, data) -> dict:
         if data is not None:
             validator = self._get_validator(self.step)
             if validator:
@@ -118,13 +119,13 @@ class RegistrProces:
             self.step = self._fix_list.pop()
         return self.mess_wrapper(self.step)
 
-    def exec(self, data=None):
+    def exec(self, data=None) -> dict:
         res = self.step_handler(data)
         if self.step == self._finish_step:
             return self.make_registration()
         return res
 
-    def make_registration(self):
+    def make_registration(self) -> dict:
         res = self.reg_sender(self.reg_blank)
         if res['status'] == 201:
             self.id = res['data']['reg_code']
@@ -159,7 +160,7 @@ class RegistrProces:
 
         return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
 
-    def mess_wrapper(self, value):
+    def mess_wrapper(self, value) -> dict:
         keyboard = None
         text = None
         if isinstance(value, str):
@@ -179,7 +180,6 @@ class RegistrProces:
         return {'data': data, 'error': None}
 
     def _to_integer(self, data: str) -> dict:
-        data = data.strip()
         message = None
         try:
             data = int(data)
@@ -205,14 +205,10 @@ class RegistrProces:
         res = self._to_integer(data)
         if res['error']:
             return res
-        data = res['data']
-        detail = self.race_detail_getter(data)
-        if detail['status'] == 404:
-            return {'data': None,
-                    'error': REG_MESSAGE['race_not_found']}
-        elif detail['status'] != 200:
-            return {'data': None,
-                    'error': REG_MESSAGE['conection_error']}
+        race_id = res['data']
+        detail = self.race_detail_handler(race_id, self.race_detail_getter)
+        if detail['error']:
+            return detail
         self.race = detail['data']
         return {'data': self.race['id'], 'error': None}
 
@@ -254,6 +250,10 @@ class User:
 
     def clear_stack(self):
         self._commands.clear()
+
+    def cancel_all(self):
+        self.clear_stack()
+        self.reg_proces = None
 
     def cmd_stack_pop(self):
         if len(self._commands) > 0:

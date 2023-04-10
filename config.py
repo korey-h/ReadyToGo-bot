@@ -6,10 +6,15 @@ MESSAGES = {
     'no_finished_commands': 'У Вас есть незавершенные процессы: %s',
     'not_allowed_btn': 'Нажатая кнопка не используется'
                        'в текущем процессе',
+    'cmd_always_on': 'Эта команда уже выполняется! Ожидаю ввод данных.',
+    'mess_cancel_this': 'команда {} отменена',
+    'mess_cancel_all': 'все процессы прекращены',
 }
 
 BUTTONS = {
     'btn_make_registr': 'Подать_заявку',
+    'cancel_this': 'Прекратить',
+    'cancel_all': 'Отменить_все',
 }
 
 REG_MESSAGE = {
@@ -41,10 +46,20 @@ REG_MESSAGE = {
 REG_BUTTONS = {
     'race_detail': 'Подробно о событии',
     'pass': 'Пропустить',
-    'reg_update': 'Редактировать заявку'
+    'reg_update': 'Редактировать заявку',
+    'reg_start': 'Зарегистрироваться',
 
 }
 
 ALLOWED_BUTTONS = {
-    'registration': ['pass', 'category'],
+    'registration': ['pass', 'category', 'reg_start'],
 }
+
+
+ABOUT_RACE = ('*Название:* {},\n'
+              '*Дата проведения:* {},\n'
+              '*Группа мероприятий:* {},\n'
+              '*Место проведения:* {},\n'
+              '*Категории участников:* \n{},\n'
+              '*Подробное описание:* \n{},\n'
+              )

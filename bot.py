@@ -7,10 +7,12 @@ from logging.handlers import RotatingFileHandler
 
 from dotenv import load_dotenv
 from telebot import TeleBot
-from telebot.types import KeyboardButton, ReplyKeyboardMarkup
 
-from config import ALLOWED_BUTTONS, BUTTONS, MESSAGES
+import static_buttons as sb
+from api_handlers import race_detail_handler
+from config import ABOUT_RACE, ALLOWED_BUTTONS, BUTTONS, MESSAGES
 from models import User
+
 
 load_dotenv('.env')
 with open('about.txt', encoding='utf-8') as f:
@@ -37,28 +39,20 @@ def get_user(message) -> User:
 def try_exec_stack(message, user: User, data):
     command = user.get_cmd_stack()
     if command and callable(command['cmd']):
-        context = {'message': message, 'user': user, 'data': data}
+        context = {
+            'message': message,
+            'user': user,
+            'data': data,
+            'from': 'stack'}
         command['cmd'](**context)
-
-
-def name_to_cmd(names):
-    return ['/' + name for name in names]
-
-
-def make_base_kbd(buttons_name):
-    keyboard = ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
-    buttons = [KeyboardButton(name) for name in buttons_name]
-    return keyboard.add(*buttons)
 
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
     user = get_user(message)
     if user.is_stack_empty():
-        buttons_name = name_to_cmd([BUTTONS['btn_make_registr']])
-        keyboard = make_base_kbd(buttons_name)
         mess = MESSAGES['welcome']
-        bot.send_message(user.id, mess, reply_markup=keyboard, )
+        bot.send_message(user.id, mess, reply_markup=sb.make_welcome_kbd())
 
 
 @bot.message_handler(commands=['подсказка', 'help'])
@@ -92,9 +86,18 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
 
     self_name = 'registration'
     user = user if user else get_user(message)
+    called_from = kwargs.get('from')
     if not user.reg_proces:
         user.start_registration()
         user.set_cmd_stack((self_name, registration))
+        if called_from and called_from == 'force_start':
+            user.reg_proces.step += 1
+    elif not called_from:
+        return bot.send_message(user.id, text=MESSAGES['cmd_always_on'])
+    elif called_from == 'force_start':
+        context = user.reg_proces.repeat_last_step()
+        return bot.send_message(user.id, **context)
+
     if has_unfinished_commands(user, self_name):
         return
     if isinstance(data, dict):
@@ -111,6 +114,65 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
     bot.send_message(user.id, **context)
 
 
+def force_start(message, user: User, data: str):
+    data = data['race_id']
+    kwargs = {'from': 'force_start'}
+    return registration(message, user, data, **kwargs)
+
+
+def about_race(message, user: User, data: str):
+    if user.reg_proces:
+        race = user.reg_proces.race
+    else:
+        race_id = data['race_id']
+        detail = race_detail_handler(race_id)
+        if detail['error']:
+            return bot.send_message(
+                user.id, text=detail['error'])
+        else:
+            race = detail['data']
+    cat_names = [cat['name'] for cat in race['race_categories']]
+    categories = ', '.join(cat_names)
+    cup = race['cup']['name'] if race['cup'] else ''
+    params = [
+        race['name'], race['date'], cup,
+        race['town'], categories, race['description']
+    ]
+    return bot.send_message(
+        user.id,
+        text=ABOUT_RACE.format(*params),
+        parse_mode='Markdown',
+        reply_markup=sb.reg_start_button(race['id']))
+
+
+@bot.message_handler(commands=[BUTTONS['cancel_all']])
+def cancel_all(message):
+    user = get_user(message)
+    user.cancel_all()
+    bot.send_message(user.id, MESSAGES['mess_cancel_all'])
+
+
+@bot.message_handler(commands=[BUTTONS['cancel_this']])
+def cancel_this(message):
+    user = get_user(message)
+    up_stack = user.cmd_stack_pop()
+    if not up_stack or not up_stack['cmd_name']:
+        return
+    cmd = up_stack['cmd']
+    all_comm = [cmd.__doc__, ]
+    while up_stack:
+        cmd = up_stack['cmd']
+        prev = user.get_cmd_stack()
+        if not prev or cmd != prev['called_by']:
+            break
+        user.cmd_stack_pop()
+        all_comm.append(prev['cmd'].__doc__)
+    out = ', '.join(all_comm)
+    bot.send_message(
+        user.id,
+        MESSAGES['mess_cancel_this'].format(out))
+
+
 @bot.message_handler(content_types=["text"])
 def text_router(message):
     user = get_user(message)
@@ -123,6 +185,11 @@ def inline_keys_exec(call):
     message = call.message
     user = get_user(message)
     data = json.loads(call.data)
+    btn_name = data.get('name')
+    if btn_name == 'reg_start':
+        return force_start(message, user, data)
+    elif btn_name == 'race_data':
+        return about_race(message, user, data)
     try_exec_stack(message, user, data)
 
 ##################################################################
