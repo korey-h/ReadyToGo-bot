@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from telebot import TeleBot
 
 import static_buttons as sb
-from api_handlers import race_detail_handler
+from api_handlers import get_races, race_detail_handler
 from config import ABOUT_RACE, ALLOWED_BUTTONS, BUTTONS, MESSAGES
 from models import User
 
@@ -78,6 +78,36 @@ def is_buttons_alowwed(func_name: str, button_data: dict, user: User):
         bot.send_message(user.id, text=text)
         return False
     return True
+
+
+@bot.message_handler(commands=[BUTTONS['all_races']])
+def show_all_races(message, user: User = None, data=None, *args, **kwargs):
+    '''Просмотр мероприятий с активной регистрацией'''
+
+    self_name = 'show_all_races'
+    user = user if user else get_user(message)
+    called_from = kwargs.get('from')
+    if has_unfinished_commands(user, self_name):
+        return
+    elif user.is_stack_empty():
+        res = get_races()
+        if res['status'] == 200:
+            page = res['data']
+            races_list = page['results']
+            data = {
+                'count': page['count'],
+                'prev': None,
+                'next': 2 if page['next'] else None}
+            params = [self_name, show_all_races,
+                      {'message': message, 'user': user, 'data': data}]
+            user.set_cmd_stack(params)
+
+    if not called_from:
+        return bot.send_message(user.id, text=MESSAGES['cmd_always_on'])
+    if isinstance(data, dict):
+        if not is_buttons_alowwed(self_name, data, user):
+            return
+        keyboard = sb.races_buttons(races_list)
 
 
 @bot.message_handler(commands=[BUTTONS['btn_make_registr']])

@@ -5,8 +5,17 @@ from config import REG_MESSAGE
 HOST = 'http://127.0.0.1:8000/api/v1'
 
 
-def get_races():
-    pass
+def get_races(page: int = None):
+    endpoint = '/races/'
+    params = ''
+    if page:
+        params = '?page=' + str(page)
+    url = HOST + endpoint + params
+    r = requests.get(url=url)
+    status = r.status_code
+    if status == 200:
+        data = r.json()
+    return {'status': status, 'data': data}
 
 
 def get_race_detail(race_id):

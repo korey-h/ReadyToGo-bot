@@ -15,6 +15,7 @@ BUTTONS = {
     'btn_make_registr': 'Подать_заявку',
     'cancel_this': 'Прекратить',
     'cancel_all': 'Отменить_все',
+    'all_races': 'Все_мероприятия',
 }
 
 REG_MESSAGE = {
@@ -53,6 +54,7 @@ REG_BUTTONS = {
 
 ALLOWED_BUTTONS = {
     'registration': ['pass', 'category', 'reg_start'],
+    'show_all_races': ['prev', 'next'],
 }
 
 

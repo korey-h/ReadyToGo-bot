@@ -1,5 +1,6 @@
 import json
 
+from typing import List
 from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup
 
@@ -52,6 +53,10 @@ def category_keyboard(obj):
         button = InlineKeyboardButton(text=text, callback_data=callback_data)
         buttons.append(button)
     return InlineKeyboardMarkup(row_width=1).add(*buttons)
+
+
+def races_buttons(races: List(dict)):
+    pass
 
 
 def race_detail_button(obj):
