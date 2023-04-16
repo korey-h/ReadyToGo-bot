@@ -238,7 +238,7 @@ class User:
                 s = tuple(cmd_stack)
                 keys_am = len(keys)
                 values = s[:keys_am] if len(s) >= keys_am else (
-                    s + tuple(None for _ in range(keys_am - len(s)))
+                    s + tuple({} for _ in range(keys_am - len(s)))
                     )
             else:
                 values = (cmd_stack, cmd_stack, {}, None)

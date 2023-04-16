@@ -10,7 +10,7 @@ from telebot import TeleBot
 
 import static_buttons as sb
 from api_handlers import get_races, race_detail_handler
-from config import ABOUT_RACE, ALLOWED_BUTTONS, BUTTONS, MESSAGES
+from config import ABOUT_RACE, ALLOWED_BUTTONS, BUTTONS, MESSAGES, PAGE_LIMIT
 from models import User
 
 
@@ -90,24 +90,48 @@ def show_all_races(message, user: User = None, data=None, *args, **kwargs):
     if has_unfinished_commands(user, self_name):
         return
     elif user.is_stack_empty():
-        res = get_races()
-        if res['status'] == 200:
-            page = res['data']
-            races_list = page['results']
-            data = {
-                'count': page['count'],
-                'prev': None,
-                'next': 2 if page['next'] else None}
-            params = [self_name, show_all_races,
-                      {'message': message, 'user': user, 'data': data}]
-            user.set_cmd_stack(params)
-
-    if not called_from:
+        user.set_cmd_stack([self_name, show_all_races])
+    elif not called_from:
         return bot.send_message(user.id, text=MESSAGES['cmd_always_on'])
-    if isinstance(data, dict):
+    elif isinstance(data, dict):
         if not is_buttons_alowwed(self_name, data, user):
             return
-        keyboard = sb.races_buttons(races_list)
+    else:
+        return
+
+    keyboard = None
+    up_stack = user.cmd_stack_pop()
+    stack_data = up_stack['data']
+    cur_page = stack_data.get('cur_page')
+    cur_page = 1 if not cur_page else cur_page
+    pages_am = stack_data.get('pages_am')
+    if pages_am and data.get('name') == 'next':
+        if cur_page < pages_am:
+            cur_page += 1
+
+    res = get_races(page=cur_page)
+    if res['status'] == 200:
+        page = res['data']
+        races_list = page['results']
+        pages_am = page['count'] // PAGE_LIMIT + 1
+        if cur_page < pages_am:
+            params = [
+                self_name, show_all_races,
+                {'message': message, 'user': user,
+                 'cur_page': cur_page, 'pages_am': pages_am}
+                ]
+            user.set_cmd_stack(params)
+        text = MESSAGES['mess_finded_races'].format(cur_page, pages_am)
+        keyboard = sb.races_buttons(races_list, cur_page, pages_am)
+    else:
+        if res['status'] == 404:
+            text = MESSAGES['not_found']
+        elif res['status'] in range(500, 600):
+            text = MESSAGES['conection_error']
+        else:
+            text = MESSAGES['unknown_error']
+        user.set_cmd_stack(up_stack)
+    bot.send_message(user.id, text=text, reply_markup=keyboard)
 
 
 @bot.message_handler(commands=[BUTTONS['btn_make_registr']])
@@ -161,8 +185,11 @@ def about_race(message, user: User, data: str):
                 user.id, text=detail['error'])
         else:
             race = detail['data']
-    cat_names = [cat['name'] for cat in race['race_categories']]
-    categories = ', '.join(cat_names)
+
+    categories = '-'
+    if race['race_categories']:
+        cat_names = [cat['name'] for cat in race['race_categories']]
+        categories = ', '.join(cat_names)
     cup = race['cup']['name'] if race['cup'] else ''
     params = [
         race['name'], race['date'], cup,
@@ -179,7 +206,9 @@ def about_race(message, user: User, data: str):
 def cancel_all(message):
     user = get_user(message)
     user.cancel_all()
-    bot.send_message(user.id, MESSAGES['mess_cancel_all'])
+    bot.send_message(
+        user.id, MESSAGES['mess_cancel_all'],
+        reply_markup=sb.make_welcome_kbd())
 
 
 @bot.message_handler(commands=[BUTTONS['cancel_this']])
@@ -200,7 +229,8 @@ def cancel_this(message):
     out = ', '.join(all_comm)
     bot.send_message(
         user.id,
-        MESSAGES['mess_cancel_this'].format(out))
+        MESSAGES['mess_cancel_this'].format(out),
+        reply_markup=sb.make_welcome_kbd())
 
 
 @bot.message_handler(content_types=["text"])

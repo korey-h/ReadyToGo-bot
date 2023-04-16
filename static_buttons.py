@@ -1,6 +1,5 @@
 import json
 
-from typing import List
 from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup
 
@@ -11,18 +10,21 @@ def name_to_cmd(names):
     return ['/' + name for name in names]
 
 
-def make_base_kbd(buttons_name):
-    keyboard = ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
+def make_base_kbd(buttons_name, row_width=3):
+    keyboard = ReplyKeyboardMarkup(row_width=row_width, resize_keyboard=True)
     buttons = [KeyboardButton(name) for name in buttons_name]
     return keyboard.add(*buttons)
 
 
 def make_welcome_kbd(*args, **kwargs):
+    row_width = 2
     buttons_name = name_to_cmd(
-        [BUTTONS['btn_make_registr'],
-         BUTTONS['cancel_all']]
+        [BUTTONS['all_races'],
+         BUTTONS['btn_make_registr'],
+         BUTTONS['cancel_this'],
+         BUTTONS['cancel_all'], ]
         )
-    return make_base_kbd(buttons_name)
+    return make_base_kbd(buttons_name, row_width)
 
 
 def cancel_this_kbd(*args, **kwargs):
@@ -55,8 +57,30 @@ def category_keyboard(obj):
     return InlineKeyboardMarkup(row_width=1).add(*buttons)
 
 
-def races_buttons(races: List(dict)):
-    pass
+def make_inline_buttons_row(datas: list) -> list:
+    buttons = []
+    for item in datas:
+        text = item[0]
+        callback_data = json.dumps(item[1])
+        button = InlineKeyboardButton(text=text, callback_data=callback_data)
+        buttons.append(button)
+    return buttons
+
+
+def races_buttons(races: list, cur_page: int, pages: int = 1):
+    datas = (
+        (item['name'],
+         {'name': 'race_data',
+          'race_id': item['id']}) for item in races
+    )
+    buttons = make_inline_buttons_row(datas)
+    if pages > 1 and cur_page < pages:
+        calbac_data = json.dumps({'name': 'next'})
+        next_btn = InlineKeyboardButton(
+            text=BUTTONS['next'],
+            callback_data=calbac_data)
+        buttons.append(next_btn)
+    return InlineKeyboardMarkup(row_width=1).add(*buttons)
 
 
 def race_detail_button(obj):
