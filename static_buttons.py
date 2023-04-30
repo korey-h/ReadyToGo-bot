@@ -68,11 +68,15 @@ def make_inline_buttons_row(datas: list) -> list:
 
 
 def races_buttons(races: list, cur_page: int, pages: int = 1):
-    datas = (
-        (item['name'],
-         {'name': 'race_data',
-          'race_id': item['id']}) for item in races
-    )
+    datas = []
+    for item in races:
+        tail = ', ' + item['cup_name'] if item['cup_name'] else ''
+        btn_name = item['name'] + tail
+        payload = {'name': 'race_data', 'race_id': item['id']}
+        datas.append(
+            (btn_name, payload)
+        )
+
     buttons = make_inline_buttons_row(datas)
     if pages > 1 and cur_page < pages:
         calbac_data = json.dumps({'name': 'next'})
