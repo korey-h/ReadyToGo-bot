@@ -143,6 +143,14 @@ class RegistrProces:
         elif res['status'] == 400:
             names_w_err = res['data']
             step_names = self._get_step_names()
+
+            base_set = set(self.reg_blank.keys())
+            cheking_set = set(names_w_err.keys())
+            if not cheking_set.issubset(base_set):
+                return self.mess_wrapper(
+                    {'text': REG_MESSAGE['unknown_fild_error']}
+                    )
+
             for name, errs in names_w_err.items():
                 step = step_names[name]
                 self._fix_list.append(step)
@@ -157,6 +165,7 @@ class RegistrProces:
         elif res['status'] in range(500, 600):
             return self.mess_wrapper(
                 {'text': REG_MESSAGE['conection_error']})
+        # TODO: добавить вывод кнопки для повторной отправки заявки.
 
         return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
 
