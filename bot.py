@@ -10,7 +10,10 @@ from telebot import TeleBot
 
 import static_buttons as sb
 from api_handlers import get_races, race_detail_handler
-from config import ABOUT_RACE, ALLOWED_BUTTONS, BUTTONS, MESSAGES, PAGE_LIMIT
+from config import (
+    ABOUT_RACE, ALLOWED_BUTTONS,
+    BUTTONS, MESSAGES,
+    PAGE_LIMIT, REG_MESSAGE)
 from models import User
 
 
@@ -146,8 +149,12 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
         user.set_cmd_stack((self_name, registration))
         if called_from and called_from == 'force_start':
             user.reg_proces.step += 1
-    elif not called_from:
-        return bot.send_message(user.id, text=MESSAGES['cmd_always_on'])
+    elif not called_from or called_from == 'force_start':
+        race_name = user.reg_proces.race['name']
+        return bot.send_message(
+            user.id,
+            text=REG_MESSAGE['reg_always_on'].format(race_name)
+            )
     elif called_from == 'force_start':
         context = user.reg_proces.repeat_last_step()
         return bot.send_message(user.id, **context)
