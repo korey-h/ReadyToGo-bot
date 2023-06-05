@@ -1,7 +1,8 @@
 import static_buttons as sb
 
 from api_handlers import (
-    get_race_detail, race_detail_handler, send_registration)
+    get_race_detail, race_detail_handler, get_rec_detail, rec_detail_handler,
+    send_registration, upd_registration)
 from config import REG_MESSAGE
 
 
@@ -14,8 +15,8 @@ class RegistrProces:
         self.is_active = True
         self.errors = {}
         self._fix_list = []
-        self.race_detail_getter = get_race_detail
-        self.race_detail_handler = race_detail_handler
+        self.detail_getter = get_race_detail
+        self.detail_handler = race_detail_handler
         self.reg_sender = send_registration
         self.reg_blank = {
             'race': None,
@@ -215,15 +216,61 @@ class RegistrProces:
         if res['error']:
             return res
         race_id = res['data']
-        detail = self.race_detail_handler(race_id, self.race_detail_getter)
+        detail = self.detail_handler(race_id, self.detail_getter)
         if detail['error']:
             return detail
         self.race = detail['data']
         return {'data': self.race['id'], 'error': None}
 
 
+class RegUpdateProces(RegistrProces):
+    def __init__(self) -> None:
+        super().__init__()
+        self._prior_messages[1]['text'] = REG_MESSAGE['mess_reg_id']
+        self.rec_getter = get_rec_detail
+        self.rec_detail_handler = rec_detail_handler
+        self.reg_sender = upd_registration
+
+    def step_handler(self, data) -> dict:
+        if data is None:
+            self.step = 1
+            return self.mess_wrapper(self.step)
+        validator = self._get_validator(self.step)
+        if validator:
+            res = validator(data)
+            if res['error']:
+                return self.mess_wrapper(res['error'])
+            data = res['data']
+        act = self._get_action(self.step)
+        if act:
+            entry = act['name']
+            self.reg_blank[entry] = data
+        if self._fix_list:
+            self.step = self._fix_list.pop()
+            return self.mess_wrapper(self.step)
+        if self.step == 1:
+            text = REG_MESSAGE['mess_select_edit_btn']
+            keyboard = sb.upd_data_btns(self)
+            return self.mess_wrapper([text, keyboard])
+        return self.mess_wrapper(REG_MESSAGE['mess_data_upd'])
+
+    def _race_setter(self, data) -> dict:
+        reg_code = data
+        rec_detail = self.rec_detail_handler(reg_code, self.rec_getter)
+        if rec_detail['error']:
+            return rec_detail
+        self.reg_blank = rec_detail['data']
+        race_detail = self.detail_handler(
+            self.reg_blank['race'], self.detail_getter)
+        if race_detail['error']:
+            return rec_detail
+        self.race = race_detail['data']
+        return {'data': self.reg_blank['race'], 'error': None}
+
+
 class User:
     reg_proces_class = RegistrProces
+    reg_update_class = RegUpdateProces
 
     def __init__(self, id):
         self.id = id
@@ -271,6 +318,10 @@ class User:
 
     def start_registration(self):
         self.reg_proces = self.reg_proces_class()
+        return None
+
+    def update_registration(self):
+        self.reg_proces = self.reg_update_class()
         return None
 
     def stop_registration(self):

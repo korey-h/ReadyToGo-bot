@@ -181,6 +181,44 @@ def force_start(message, user: User, data: str):
     return registration(message, user, data, **kwargs)
 
 
+@bot.message_handler(commands=[BUTTONS['btn_reg_update']])
+def reg_update(message, user: User = None, data=None, *args, **kwargs):
+    '''Редактирование заявки'''
+
+    self_name = 'update_registration'
+    user = user if user else get_user(message)
+    called_from = kwargs.get('from')
+    if not user.reg_proces:
+        user.update_registration()
+        user.set_cmd_stack((self_name, reg_update))
+        if called_from and called_from == 'force_start':
+            user.reg_proces.step += 1
+    elif not called_from or called_from == 'force_start':
+        race_name = user.reg_proces.race['name']
+        return bot.send_message(
+            user.id,
+            text=REG_MESSAGE['reg_always_on'].format(race_name)
+            )
+    elif called_from == 'force_start':
+        context = user.reg_proces.repeat_last_step()
+        return bot.send_message(user.id, **context)
+
+    if has_unfinished_commands(user, self_name):
+        return
+    if isinstance(data, dict):
+        if not is_buttons_alowwed(self_name, data, user):
+            return
+        data = data['payload'] if 'payload' in data.keys() else data
+    if data is None and user.reg_proces.step > 0:
+        context = user.reg_proces.pass_step()
+    else:
+        context = user.reg_proces.exec(data)
+    if not user.reg_proces.is_active:
+        user.stop_registration()
+        user.cmd_stack_pop()
+    bot.send_message(user.id, **context)
+
+
 def about_race(message, user: User, data: str):
     if user.reg_proces:
         race = user.reg_proces.race

@@ -4,6 +4,7 @@ from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup
 
 from config import BUTTONS, REG_BUTTONS
+# from models import RegUpdateProces
 
 
 def name_to_cmd(names):
@@ -21,6 +22,7 @@ def make_welcome_kbd(*args, **kwargs):
     buttons_name = name_to_cmd(
         [BUTTONS['all_races'],
          BUTTONS['btn_make_registr'],
+         BUTTONS['btn_reg_update'],
          BUTTONS['cancel_this'],
          BUTTONS['cancel_all'], ]
         )
@@ -117,3 +119,23 @@ def reg_start_button(race_id):
              'race_id': race_id})
         )
     return InlineKeyboardMarkup().add(btn_reg_update)
+
+
+def upd_data_btns(obj):
+    '''obj - объект класса RegUpdateProces'''
+    step_for_name = obj._get_step_names()
+    reg_blank = obj.reg_blank
+    excluded = ['race', 'id', 'reg_code']
+    datas = []
+    for name, data in reg_blank.items():
+        if name in excluded:
+            continue
+        mark = BUTTONS[name] if BUTTONS.get(name) else name
+        value = data if data else '---'
+        btn_name = f'{mark}: {value}'
+        payload = {'step': step_for_name[name]}
+        datas.append(
+            (btn_name, payload)
+        )
+    buttons = make_inline_buttons_row(datas)
+    return InlineKeyboardMarkup(row_width=1).add(*buttons)

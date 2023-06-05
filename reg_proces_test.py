@@ -56,7 +56,7 @@ scena = [
 ]
 
 registrator = md.RegistrProces()
-registrator.race_detail_getter = test_race_detail
+registrator.detail_getter = test_race_detail
 registrator.reg_sender = test_reg_send
 
 message = registrator.exec('race_id')
