@@ -128,7 +128,7 @@ class RegistrProces:
 
     def make_registration(self) -> dict:
         res = self.reg_sender(self.reg_blank)
-        if res['status'] == 201:
+        if res['status'] in (200, 201):
             self.id = res['data']['reg_code']
             self.is_active = False
             r = self.race
@@ -164,8 +164,7 @@ class RegistrProces:
             return self.mess_wrapper(text)
 
         elif res['status'] in range(500, 600):
-            return self.mess_wrapper(
-                {'text': REG_MESSAGE['conection_error']})
+            return self.mess_wrapper(REG_MESSAGE['conection_error'])
         # TODO: добавить вывод кнопки для повторной отправки заявки.
 
         return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
@@ -231,6 +230,9 @@ class RegUpdateProces(RegistrProces):
         self.rec_detail_handler = rec_detail_handler
         self.reg_sender = upd_registration
 
+    def pass_step(self):
+        pass
+
     def step_handler(self, data) -> dict:
         if data is None:
             self.step = 1
@@ -260,6 +262,7 @@ class RegUpdateProces(RegistrProces):
         if rec_detail['error']:
             return rec_detail
         self.reg_blank = rec_detail['data']
+        self.id = self.reg_blank['reg_code']
         race_detail = self.detail_handler(
             self.reg_blank['race'], self.detail_getter)
         if race_detail['error']:

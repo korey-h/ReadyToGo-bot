@@ -209,7 +209,13 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
         if not is_buttons_alowwed(self_name, data, user):
             return
         data = data['payload'] if 'payload' in data.keys() else data
-    if data is None and user.reg_proces.step > 0:
+        step = data['step']
+        user.reg_proces.step = step
+        if step == user.reg_proces._finish_step:
+            context = user.reg_proces.make_registration()
+        else:
+            context = user.reg_proces.mess_wrapper(step)
+    elif data is None and user.reg_proces.step > 0:
         context = user.reg_proces.pass_step()
     else:
         context = user.reg_proces.exec(data)

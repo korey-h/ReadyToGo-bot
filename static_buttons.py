@@ -133,9 +133,13 @@ def upd_data_btns(obj):
         mark = BUTTONS[name] if BUTTONS.get(name) else name
         value = data if data else '---'
         btn_name = f'{mark}: {value}'
-        payload = {'step': step_for_name[name]}
+        payload = {'name': 'reg_upd', 'step': step_for_name[name]}
         datas.append(
             (btn_name, payload)
         )
+    datas.append((
+        BUTTONS['save'],
+        {'name': 'reg_upd', 'step': obj._finish_step}
+        ))
     buttons = make_inline_buttons_row(datas)
     return InlineKeyboardMarkup(row_width=1).add(*buttons)

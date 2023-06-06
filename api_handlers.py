@@ -44,7 +44,16 @@ def send_registration(data):
 
 
 def upd_registration(data):
-    pass
+    endpoint = '/registration/' + data['reg_code']
+    url = HOST + endpoint
+    try:
+        r = requests.put(url=url, data=data)
+        status = r.status_code
+    except Exception:
+        status = 500
+    if status in (201, 400):
+        data = r.json()
+    return {'status': status, 'data': data}
 
 
 def get_rec_detail(reg_code):
