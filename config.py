@@ -84,7 +84,7 @@ REG_BUTTONS = {
 ALLOWED_BUTTONS = {
     'registration': ['pass', 'category', 'reg_start'],
     'show_all_races': ['prev', 'next'],
-    'update_registration': ['reg_upd'],
+    'update_registration': ['reg_upd', 'category'],
 }
 
 

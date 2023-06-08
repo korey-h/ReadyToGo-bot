@@ -106,7 +106,7 @@ def reg_update_button(obj):
         text=REG_BUTTONS['reg_update'],
         callback_data=json.dumps(
             {'name': 'update',
-             'reg_code': reg_code})
+             'id': reg_code})
         )
     return InlineKeyboardMarkup().add(btn_reg_update)
 
@@ -116,7 +116,7 @@ def reg_start_button(race_id):
         text=REG_BUTTONS['reg_start'],
         callback_data=json.dumps(
             {'name': 'reg_start',
-             'race_id': race_id})
+             'id': race_id})
         )
     return InlineKeyboardMarkup().add(btn_reg_update)
 
@@ -125,6 +125,8 @@ def upd_data_btns(obj):
     '''obj - объект класса RegUpdateProces'''
     step_for_name = obj._get_step_names()
     reg_blank = obj.reg_blank
+    categories = obj.race['race_categories']
+    cat_names = {cat['id']: cat['name'] for cat in categories}
     excluded = ['race', 'id', 'reg_code']
     datas = []
     for name, data in reg_blank.items():
@@ -132,6 +134,8 @@ def upd_data_btns(obj):
             continue
         mark = BUTTONS[name] if BUTTONS.get(name) else name
         value = data if data else '---'
+        if name == 'category':
+            value = cat_names[data]
         btn_name = f'{mark}: {value}'
         payload = {'name': 'reg_upd', 'step': step_for_name[name]}
         datas.append(

@@ -175,9 +175,11 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
     bot.send_message(user.id, **context)
 
 
-def force_start(message, user: User, data: str):
-    data = data['race_id']
+def force_start(message, user: User, btn_name: str, data: str):
+    data = data['id']
     kwargs = {'from': 'force_start'}
+    if btn_name == 'update':
+        return reg_update(message, user, data, **kwargs)
     return registration(message, user, data, **kwargs)
 
 
@@ -209,12 +211,15 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
         if not is_buttons_alowwed(self_name, data, user):
             return
         data = data['payload'] if 'payload' in data.keys() else data
-        step = data['step']
-        user.reg_proces.step = step
-        if step == user.reg_proces._finish_step:
-            context = user.reg_proces.make_registration()
+        if data.get('name') == 'category':
+            context = user.reg_proces.exec(data)
         else:
-            context = user.reg_proces.mess_wrapper(step)
+            step = data['step']
+            user.reg_proces.step = step
+            if step == user.reg_proces._finish_step:
+                context = user.reg_proces.make_registration()
+            else:
+                context = user.reg_proces.mess_wrapper(step)
     elif data is None and user.reg_proces.step > 0:
         context = user.reg_proces.pass_step()
     else:
@@ -297,8 +302,8 @@ def inline_keys_exec(call):
     user = get_user(message)
     data = json.loads(call.data)
     btn_name = data.get('name')
-    if btn_name == 'reg_start':
-        return force_start(message, user, data)
+    if btn_name in ('reg_start', 'update'):
+        return force_start(message, user, btn_name, data)
     elif btn_name == 'race_data':
         return about_race(message, user, data)
     try_exec_stack(message, user, data)
