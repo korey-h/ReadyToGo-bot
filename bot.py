@@ -50,6 +50,11 @@ def try_exec_stack(message, user: User, data):
         command['cmd'](**context)
 
 
+def send_multymessage(user_id, pre_mess: list):
+    for mess_data in pre_mess:
+        bot.send_message(user_id, **mess_data)
+
+
 @bot.message_handler(commands=['start'])
 def welcome(message):
     user = get_user(message)
@@ -157,7 +162,7 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
             )
     elif called_from == 'force_start':
         context = user.reg_proces.repeat_last_step()
-        return bot.send_message(user.id, **context)
+        return send_multymessage(user.id, context)
 
     if has_unfinished_commands(user, self_name):
         return
@@ -172,7 +177,7 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
     if not user.reg_proces.is_active:
         user.stop_registration()
         user.cmd_stack_pop()
-    bot.send_message(user.id, **context)
+    send_multymessage(user.id, context)
 
 
 def force_start(message, user: User, btn_name: str, data: str):
@@ -203,7 +208,7 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
             )
     elif called_from == 'force_start':
         context = user.reg_proces.repeat_last_step()
-        return bot.send_message(user.id, **context)
+        return send_multymessage(user.id, context)
 
     if has_unfinished_commands(user, self_name):
         return
@@ -227,7 +232,7 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
     if not user.reg_proces.is_active:
         user.stop_registration()
         user.cmd_stack_pop()
-    bot.send_message(user.id, **context)
+    send_multymessage(user.id, context)
 
 
 def about_race(message, user: User, data: str):

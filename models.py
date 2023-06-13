@@ -1,3 +1,5 @@
+from typing import List
+
 import static_buttons as sb
 
 from api_handlers import (
@@ -33,22 +35,22 @@ class RegistrProces:
     _stop_text = 'to registration'
     _finish_step = 10
     _prior_messages = {
-        1: {'text': REG_MESSAGE['mess_ask_race'],
-            'kbd_maker': sb.cancel_this_kbd},
-        2: {'text': REG_MESSAGE['mess_ask_name'],
-            'kbd_maker': sb.race_detail_button},
-        3: {'text': REG_MESSAGE['mess_ask_surname']},
-        4: {'text': REG_MESSAGE['mess_ask_patronymic'],
-            'kbd_maker': sb.pass_keyboard},
-        5: {'text': REG_MESSAGE['mess_ask_year']},
-        6: {'text': REG_MESSAGE['mess_ask_town'],
-            'kbd_maker': sb.pass_keyboard},
-        7: {'text': REG_MESSAGE['mess_ask_club'],
-            'kbd_maker': sb.pass_keyboard},
-        8: {'text': REG_MESSAGE['mess_ask_category'],
-            'kbd_maker': sb.category_keyboard},
-        9: {'text': REG_MESSAGE['mess_ask_number']},
-        10: {'text': _stop_text},
+        1: [{'text': REG_MESSAGE['mess_ask_race'],
+            'kbd_maker': sb.cancel_this_kbd}],
+        2: [{'text': REG_MESSAGE['mess_ask_name'],
+            'kbd_maker': sb.race_detail_button}],
+        3: [{'text': REG_MESSAGE['mess_ask_surname']}],
+        4: [{'text': REG_MESSAGE['mess_ask_patronymic'],
+            'kbd_maker': sb.pass_keyboard}],
+        5: [{'text': REG_MESSAGE['mess_ask_year']}],
+        6: [{'text': REG_MESSAGE['mess_ask_town'],
+            'kbd_maker': sb.pass_keyboard}],
+        7: [{'text': REG_MESSAGE['mess_ask_club'],
+            'kbd_maker': sb.pass_keyboard}],
+        8: [{'text': REG_MESSAGE['mess_ask_category'],
+            'kbd_maker': sb.category_keyboard}],
+        9: [{'text': REG_MESSAGE['mess_ask_number']}],
+        10: [{'text': _stop_text}],
     }
 
     _step_actions = {
@@ -169,20 +171,24 @@ class RegistrProces:
 
         return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
 
-    def mess_wrapper(self, value) -> dict:
+    def mess_wrapper(self, value) -> List[dict]:
         keyboard = None
         text = None
         if isinstance(value, str):
             text = value
         elif isinstance(value, int):
-            data = self._prior_messages[value]
-            text = data['text']
-            maker = data.get('kbd_maker')
-            keyboard = maker(self) if maker else None
+            pre_mess = []
+            datas = self._prior_messages[value]
+            for data in datas:
+                text = data['text']
+                maker = data.get('kbd_maker')
+                keyboard = maker(self) if maker else None
+                pre_mess.append({'text': text, 'reply_markup': keyboard})
+            return pre_mess
         elif isinstance(value, (list, tuple)):
             text = value[0]
             keyboard = value[1]
-        return {'text': text, 'reply_markup': keyboard}
+        return [{'text': text, 'reply_markup': keyboard}]
 
     def _clipper(self, data: str) -> dict:
         data = data.strip()
@@ -225,7 +231,7 @@ class RegistrProces:
 class RegUpdateProces(RegistrProces):
     def __init__(self) -> None:
         super().__init__()
-        self._prior_messages[1]['text'] = REG_MESSAGE['mess_reg_id']
+        self._prior_messages[1][0]['text'] = REG_MESSAGE['mess_reg_id']
         self.rec_getter = get_rec_detail
         self.rec_detail_handler = rec_detail_handler
         self.reg_sender = upd_registration
@@ -316,6 +322,8 @@ class User:
 
     def cmd_stack_pop(self):
         if len(self._commands) > 0:
+            if self.reg_proces:
+                self.stop_registration()
             return self._commands.pop()
         return None
 
