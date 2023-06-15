@@ -141,7 +141,12 @@ class RegistrProces:
                     f' {bl["surname"]}, {bl["year"]} г.р., {bl["town"]}.\n'
                     f'Номер заявки {self.id}')
             keyboard = sb.reg_update_button(self)
-            return self.mess_wrapper([text, keyboard])
+            text_2 = '.'
+            keyboard_2 = sb.make_welcome_kbd()
+            return self.mess_wrapper([
+                [text, keyboard],
+                [text_2, keyboard_2],
+                ])
 
         elif res['status'] == 400:
             names_w_err = res['data']
@@ -186,8 +191,14 @@ class RegistrProces:
                 pre_mess.append({'text': text, 'reply_markup': keyboard})
             return pre_mess
         elif isinstance(value, (list, tuple)):
-            text = value[0]
-            keyboard = value[1]
+            pre_mess = []
+            for data in value:
+                text = data[0]
+                keyboard = data[1]
+                pre_mess.append({'text': text, 'reply_markup': keyboard})
+            return pre_mess
+        elif isinstance(value, dict):
+            return [value]
         return [{'text': text, 'reply_markup': keyboard}]
 
     def _clipper(self, data: str) -> dict:
@@ -229,9 +240,24 @@ class RegistrProces:
 
 
 class RegUpdateProces(RegistrProces):
+    _stop_text = 'to registration'
+    _prior_messages = {
+        1: [{'text': REG_MESSAGE['mess_reg_id'],
+            'kbd_maker': sb.cancel_this_kbd}],
+        2: [{'text': REG_MESSAGE['mess_ask_name'], }],
+        3: [{'text': REG_MESSAGE['mess_ask_surname']}],
+        4: [{'text': REG_MESSAGE['mess_ask_patronymic'], }],
+        5: [{'text': REG_MESSAGE['mess_ask_year']}],
+        6: [{'text': REG_MESSAGE['mess_ask_town'], }],
+        7: [{'text': REG_MESSAGE['mess_ask_club'], }],
+        8: [{'text': REG_MESSAGE['mess_ask_category'],
+            'kbd_maker': sb.category_keyboard}],
+        9: [{'text': REG_MESSAGE['mess_ask_number']}],
+        10: [{'text': _stop_text}],
+    }
+
     def __init__(self) -> None:
         super().__init__()
-        self._prior_messages[1][0]['text'] = REG_MESSAGE['mess_reg_id']
         self.rec_getter = get_rec_detail
         self.rec_detail_handler = rec_detail_handler
         self.reg_sender = upd_registration
@@ -259,7 +285,7 @@ class RegUpdateProces(RegistrProces):
         if self.step == 1:
             text = REG_MESSAGE['mess_select_edit_btn']
             keyboard = sb.upd_data_btns(self)
-            return self.mess_wrapper([text, keyboard])
+            return self.mess_wrapper([[text, keyboard]])
         return self.mess_wrapper(REG_MESSAGE['mess_data_upd'])
 
     def _race_setter(self, data) -> dict:
