@@ -11,7 +11,7 @@ from telebot import TeleBot
 import static_buttons as sb
 from api_handlers import get_races, race_detail_handler
 from config import (
-    ABOUT_RACE, ALLOWED_BUTTONS,
+    ABOUT_RACE, ALLOWED_BUTTONS, EMOJI,
     BUTTONS, MESSAGES,
     PAGE_LIMIT, REG_MESSAGE)
 from models import User
@@ -48,6 +48,10 @@ def try_exec_stack(message, user: User, data):
             'data': data,
             'from': 'stack'}
         command['cmd'](**context)
+    else:
+        bot.send_message(
+            user.id, EMOJI['bicyclist'],
+            reply_markup=sb.make_welcome_kbd())
 
 
 def send_multymessage(user_id, pre_mess: list):
@@ -154,13 +158,13 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
         user.set_cmd_stack((self_name, registration))
         if called_from and called_from == 'force_start':
             user.reg_proces.step += 1
-    elif not called_from or called_from == 'force_start':
+    elif not called_from:
         race_name = user.reg_proces.race['name']
         return bot.send_message(
             user.id,
             text=REG_MESSAGE['reg_always_on'].format(race_name)
             )
-    elif called_from == 'force_start':
+    elif called_from == 'force_start' and user.reg_proces.race:
         context = user.reg_proces.repeat_last_step()
         return send_multymessage(user.id, context)
 
@@ -242,13 +246,16 @@ def about_race(message, user: User, data: str):
         race_id = data['race_id']
         detail = race_detail_handler(race_id)
         if detail['error']:
-            return bot.send_message(
-                user.id, text=detail['error'])
+            bot.send_message(user.id, text=detail['error'])
+            bot.send_message(
+                user.id, EMOJI['bicyclist'],
+                reply_markup=sb.make_welcome_kbd())
+            return
         else:
             race = detail['data']
 
     categories = '-'
-    if race['race_categories']:
+    if race.get('race_categories'):
         cat_names = [cat['name'] for cat in race['race_categories']]
         categories = ', '.join(cat_names)
     cup = race['cup']['name'] if race['cup'] else ''

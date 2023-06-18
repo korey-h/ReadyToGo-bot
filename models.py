@@ -5,7 +5,7 @@ import static_buttons as sb
 from api_handlers import (
     get_race_detail, race_detail_handler, get_rec_detail, rec_detail_handler,
     send_registration, upd_registration)
-from config import REG_MESSAGE
+from config import EMOJI, REG_MESSAGE
 
 
 class RegistrProces:
@@ -141,7 +141,7 @@ class RegistrProces:
                     f' {bl["surname"]}, {bl["year"]} г.р., {bl["town"]}.\n'
                     f'Номер заявки {self.id}')
             keyboard = sb.reg_update_button(self)
-            text_2 = '.'
+            text_2 = EMOJI['bicyclist']
             keyboard_2 = sb.make_welcome_kbd()
             return self.mess_wrapper([
                 [text, keyboard],
@@ -166,7 +166,7 @@ class RegistrProces:
             self._fix_list.append(self._finish_step)
             self._fix_list.reverse()
             self.step = self._fix_list.pop()
-            text = (self._prior_messages[self.step]['text'] + '\n' +
+            text = (self._prior_messages[self.step][0]['text'] + '\n' +
                     self.errors[self.step])
             return self.mess_wrapper(text)
 
