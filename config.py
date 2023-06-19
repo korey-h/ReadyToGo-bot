@@ -34,6 +34,7 @@ BUTTONS = {
     'town': 'Город',
     'category': 'Категория',
     'save': 'Сохранить изменения',
+    'save_changes': 'Сохранить',
 }
 
 REG_MESSAGE = {

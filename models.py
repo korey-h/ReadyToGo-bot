@@ -141,11 +141,9 @@ class RegistrProces:
                     f' {bl["surname"]}, {bl["year"]} г.р., {bl["town"]}.\n'
                     f'Номер заявки {self.id}')
             keyboard = sb.reg_update_button(self)
-            text_2 = EMOJI['bicyclist']
-            keyboard_2 = sb.make_welcome_kbd()
             return self.mess_wrapper([
                 [text, keyboard],
-                [text_2, keyboard_2],
+                [EMOJI['bicyclist'], sb.make_welcome_kbd()],
                 ])
 
         elif res['status'] == 400:
@@ -283,9 +281,10 @@ class RegUpdateProces(RegistrProces):
             self.step = self._fix_list.pop()
             return self.mess_wrapper(self.step)
         if self.step == 1:
-            text = REG_MESSAGE['mess_select_edit_btn']
-            keyboard = sb.upd_data_btns(self)
-            return self.mess_wrapper([[text, keyboard]])
+            return self.mess_wrapper([
+                [REG_MESSAGE['mess_select_edit_btn'], sb.upd_data_btns(self)],
+                [EMOJI['bicyclist'], sb.upd_comms_kbd()],
+                ])
         return self.mess_wrapper(REG_MESSAGE['mess_data_upd'])
 
     def _race_setter(self, data) -> dict:

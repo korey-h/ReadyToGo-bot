@@ -36,6 +36,14 @@ def cancel_this_kbd(*args, **kwargs):
     return make_base_kbd(buttons_name)
 
 
+def upd_comms_kbd(*args, **kwargs):
+    buttons_name = name_to_cmd([
+         BUTTONS['cancel_this'],
+         BUTTONS['save_changes'],
+        ])
+    return make_base_kbd(buttons_name)
+
+
 def pass_keyboard(obj):
     pass_button = InlineKeyboardButton(
         text=REG_BUTTONS['pass'],

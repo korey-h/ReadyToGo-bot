@@ -239,6 +239,20 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
     send_multymessage(user.id, context)
 
 
+@bot.message_handler(commands=[BUTTONS['save_changes']])
+def save_update(message):
+    user = get_user(message)
+    up_stack = user.get_cmd_stack()
+    if up_stack and (
+            up_stack['cmd_name'] == 'update_registration' and
+            user.reg_proces.race):
+        context = user.reg_proces.make_registration()
+        send_multymessage(user.id, context)
+        if not user.reg_proces.is_active:
+            user.stop_registration()
+            user.cmd_stack_pop()
+
+
 def about_race(message, user: User, data: str):
     if user.reg_proces:
         race = user.reg_proces.race
