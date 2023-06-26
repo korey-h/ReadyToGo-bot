@@ -133,3 +133,5 @@ vscode/
 
 .drafts
 drafts/
+.chat_loggs
+chat_loggs/

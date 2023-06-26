@@ -1,4 +1,5 @@
 PAGE_LIMIT = 10
+DEBUG_MODE = True
 
 MESSAGES = {
     'welcome':

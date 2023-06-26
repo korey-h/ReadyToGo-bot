@@ -15,6 +15,7 @@ from config import (
     BUTTONS, MESSAGES,
     PAGE_LIMIT, REG_MESSAGE)
 from models import User
+from utils import com_logger, query_logger, text_logger
 
 
 load_dotenv('.env')
@@ -59,7 +60,7 @@ def send_multymessage(user_id, pre_mess: list):
         bot.send_message(user_id, **mess_data)
 
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start'], func=com_logger)
 def welcome(message):
     user = get_user(message)
     if user.is_stack_empty():
@@ -67,7 +68,7 @@ def welcome(message):
         bot.send_message(user.id, mess, reply_markup=sb.make_welcome_kbd())
 
 
-@bot.message_handler(commands=['подсказка', 'help'])
+@bot.message_handler(commands=['подсказка', 'help'], func=com_logger)
 def about(message):
     user = get_user(message)
     bot.send_message(user.id, ABOUT)
@@ -92,7 +93,7 @@ def is_buttons_alowwed(func_name: str, button_data: dict, user: User):
     return True
 
 
-@bot.message_handler(commands=[BUTTONS['all_races']])
+@bot.message_handler(commands=[BUTTONS['all_races']],  func=com_logger)
 def show_all_races(message, user: User = None, data=None, *args, **kwargs):
     '''Просмотр мероприятий с активной регистрацией'''
 
@@ -146,7 +147,7 @@ def show_all_races(message, user: User = None, data=None, *args, **kwargs):
     bot.send_message(user.id, text=text, reply_markup=keyboard)
 
 
-@bot.message_handler(commands=[BUTTONS['btn_make_registr']])
+@bot.message_handler(commands=[BUTTONS['btn_make_registr']], func=com_logger)
 def registration(message, user: User = None, data=None, *args, **kwargs):
     '''Регистрация на мероприятие'''
 
@@ -159,6 +160,8 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
         if called_from and called_from == 'force_start':
             user.reg_proces.step += 1
     elif not called_from:
+        if not user.reg_proces.race:
+            return
         race_name = user.reg_proces.race['name']
         return bot.send_message(
             user.id,
@@ -192,7 +195,7 @@ def force_start(message, user: User, btn_name: str, data: str):
     return registration(message, user, data, **kwargs)
 
 
-@bot.message_handler(commands=[BUTTONS['btn_reg_update']])
+@bot.message_handler(commands=[BUTTONS['btn_reg_update']], func=com_logger)
 def reg_update(message, user: User = None, data=None, *args, **kwargs):
     '''Редактирование заявки'''
 
@@ -205,6 +208,8 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
         if called_from and called_from == 'force_start':
             user.reg_proces.step += 1
     elif not called_from or called_from == 'force_start':
+        if not user.reg_proces.race:
+            return
         race_name = user.reg_proces.race['name']
         return bot.send_message(
             user.id,
@@ -239,7 +244,7 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
     send_multymessage(user.id, context)
 
 
-@bot.message_handler(commands=[BUTTONS['save_changes']])
+@bot.message_handler(commands=[BUTTONS['save_changes']], func=com_logger)
 def save_update(message):
     user = get_user(message)
     up_stack = user.get_cmd_stack()
@@ -284,7 +289,7 @@ def about_race(message, user: User, data: str):
         reply_markup=sb.reg_start_button(race['id']))
 
 
-@bot.message_handler(commands=[BUTTONS['cancel_all']])
+@bot.message_handler(commands=[BUTTONS['cancel_all']], func=com_logger)
 def cancel_all(message):
     user = get_user(message)
     user.cancel_all()
@@ -293,7 +298,7 @@ def cancel_all(message):
         reply_markup=sb.make_welcome_kbd())
 
 
-@bot.message_handler(commands=[BUTTONS['cancel_this']])
+@bot.message_handler(commands=[BUTTONS['cancel_this']], func=com_logger)
 def cancel_this(message):
     user = get_user(message)
     up_stack = user.cmd_stack_pop()
@@ -315,14 +320,14 @@ def cancel_this(message):
         reply_markup=sb.make_welcome_kbd())
 
 
-@bot.message_handler(content_types=["text"])
+@bot.message_handler(content_types=["text"], func=text_logger)
 def text_router(message):
     user = get_user(message)
     data = message.text
     try_exec_stack(message, user, data)
 
 
-@bot.callback_query_handler(func=lambda call: True, )
+@bot.callback_query_handler(func=query_logger, )
 def inline_keys_exec(call):
     message = call.message
     user = get_user(message)
