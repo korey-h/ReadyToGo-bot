@@ -63,7 +63,13 @@ def send_multymessage(user_id, pre_mess: list):
 @bot.message_handler(commands=['start'], func=com_logger)
 def welcome(message):
     user = get_user(message)
-    if user.is_stack_empty():
+    words = message.text.split(' ')
+    if len(words) > 1:
+        bot.send_message(user.id, MESSAGES['lets_reg'])
+        data = words[1]
+        kwargs = {'from': 'force_start'}
+        return registration(message, user, data, **kwargs)
+    elif user.is_stack_empty():
         mess = MESSAGES['welcome']
         bot.send_message(user.id, mess, reply_markup=sb.make_welcome_kbd())
 
@@ -75,9 +81,9 @@ def about(message):
 
 
 def has_unfinished_commands(user: User, cmd_name: str):
-    cmd = user.get_cmd_stack()
-    if cmd and cmd['cmd_name'] != cmd_name:
-        text = MESSAGES['no_finished_commands'] % (cmd.__doc__)
+    up_stack = user.get_cmd_stack()
+    if up_stack and up_stack['cmd_name'] != cmd_name:
+        text = MESSAGES['no_finished_commands'] % (up_stack['cmd'].__doc__)
         bot.send_message(user.id, text=text)
         return True
     return False
