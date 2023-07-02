@@ -80,12 +80,14 @@ def about(message):
     bot.send_message(user.id, ABOUT)
 
 
-def has_unfinished_commands(user: User, cmd_name: str):
+def has_unfinished_commands(user: User, cmd_name: str, friends: list = []):
     up_stack = user.get_cmd_stack()
-    if up_stack and up_stack['cmd_name'] != cmd_name:
-        text = MESSAGES['no_finished_commands'] % (up_stack['cmd'].__doc__)
-        bot.send_message(user.id, text=text)
-        return True
+    if up_stack:
+        cmd_in_stack = up_stack['cmd_name']
+        if cmd_name != cmd_in_stack and cmd_in_stack not in friends:
+            text = MESSAGES['no_finished_commands'] % (up_stack['cmd'].__doc__)
+            bot.send_message(user.id, text=text)
+            return True
     return False
 
 
@@ -160,6 +162,8 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
     self_name = 'registration'
     user = user if user else get_user(message)
     called_from = kwargs.get('from')
+    if has_unfinished_commands(user, self_name, ['show_all_races']):
+        return
     if not user.reg_proces:
         user.start_registration()
         user.set_cmd_stack((self_name, registration))
@@ -177,8 +181,6 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
         context = user.reg_proces.repeat_last_step()
         return send_multymessage(user.id, context)
 
-    if has_unfinished_commands(user, self_name):
-        return
     if isinstance(data, dict):
         if not is_buttons_alowwed(self_name, data, user):
             return
@@ -208,6 +210,8 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
     self_name = 'update_registration'
     user = user if user else get_user(message)
     called_from = kwargs.get('from')
+    if has_unfinished_commands(user, self_name, ['show_all_races']):
+        return
     if not user.reg_proces:
         user.update_registration()
         user.set_cmd_stack((self_name, reg_update))
@@ -225,8 +229,6 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
         context = user.reg_proces.repeat_last_step()
         return send_multymessage(user.id, context)
 
-    if has_unfinished_commands(user, self_name):
-        return
     if isinstance(data, dict):
         if not is_buttons_alowwed(self_name, data, user):
             return
