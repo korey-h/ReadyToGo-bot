@@ -1,5 +1,6 @@
 from typing import List
 
+import message_generators as mg
 import static_buttons as sb
 
 from api_handlers import (
@@ -37,7 +38,9 @@ class RegistrProces:
     _prior_messages = {
         1: [{'text': REG_MESSAGE['mess_ask_race'],
             'kbd_maker': sb.cancel_this_kbd}],
-        2: [{'text': REG_MESSAGE['mess_ask_name'],
+        2: [{'text': mg.about_reg,
+             'kbd_maker': sb.cancel_this_kbd},
+            {'text': REG_MESSAGE['mess_ask_name'],
             'kbd_maker': sb.race_detail_button}],
         3: [{'text': REG_MESSAGE['mess_ask_surname']}],
         4: [{'text': REG_MESSAGE['mess_ask_patronymic'],
@@ -136,10 +139,12 @@ class RegistrProces:
             r = self.race
             bl = self.reg_blank
             cat_names = {c['id']: c['name'] for c in r['race_categories']}
-            text = (f'{r["name"]}, категория "{cat_names[bl["category"]]}", '
-                    f'номер {bl["number"]}, {bl["name"]} {bl["patronymic"]}'
-                    f' {bl["surname"]}, {bl["year"]} г.р., {bl["town"]}.\n'
-                    f'Номер заявки {self.id}')
+            text = REG_MESSAGE['reg_confirm'] % (
+                    r["name"], bl["name"],
+                    bl["patronymic"], bl["surname"], bl["year"], bl["town"],
+                    bl["club"], cat_names[bl["category"]], bl["number"],
+                    self.id)
+
             keyboard = sb.reg_update_button(self)
             return self.mess_wrapper([
                 [text, keyboard],
@@ -184,6 +189,8 @@ class RegistrProces:
             datas = self._prior_messages[value]
             for data in datas:
                 text = data['text']
+                if callable(text):
+                    text = text(self)
                 maker = data.get('kbd_maker')
                 keyboard = maker(self) if maker else None
                 pre_mess.append({'text': text, 'reply_markup': keyboard})
