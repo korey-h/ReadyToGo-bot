@@ -119,6 +119,13 @@ class RegistrProces:
             if act:
                 entry = act['name']
                 self.reg_blank[entry] = data
+
+        if self.step == 1 and not self.race['is_active']:
+            self.is_active = False
+            return self.mess_wrapper(
+                {'text': REG_MESSAGE['reg_inactive'],
+                 'reply_markup': sb.make_welcome_kbd()})
+
         if not self._fix_list:
             self.step += 1
         else:
@@ -179,6 +186,8 @@ class RegistrProces:
             keyboard = sb.make_welcome_kbd()
             if isinstance(res_data, str):
                 text = res_data
+            elif isinstance(res_data, dict):
+                text = '\n'.join(res_data.values())
             else:
                 text = str(res_data)
             return self.mess_wrapper(
@@ -300,6 +309,11 @@ class RegUpdateProces(RegistrProces):
             self.step = self._fix_list.pop()
             return self.mess_wrapper(self.step)
         if self.step == 1:
+            # if not self.race['is_active']:
+            #     self.is_active = False
+            #     return self.mess_wrapper([
+            #         [REG_MESSAGE['reg_inactive'], sb.make_welcome_kbd()]
+            #         ])
             return self.mess_wrapper([
                 [REG_MESSAGE['mess_select_edit_btn'], sb.upd_data_btns(self)],
                 [EMOJI['bicyclist'], sb.upd_comms_kbd()],
