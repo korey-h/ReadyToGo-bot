@@ -38,7 +38,7 @@ def send_registration(data):
         status = r.status_code
     except Exception:
         status = 500
-    if status in (201, 400):
+    if status in (201, 400, 403):
         data = r.json()
     return {'status': status, 'data': data}
 

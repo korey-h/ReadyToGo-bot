@@ -133,8 +133,9 @@ class RegistrProces:
 
     def make_registration(self) -> dict:
         res = self.reg_sender(self.reg_blank)
+        res_data = res.get('data')
         if res['status'] in (200, 201):
-            self.id = res['data']['reg_code']
+            self.id = res_data['reg_code']
             self.is_active = False
             r = self.race
             bl = self.reg_blank
@@ -152,7 +153,7 @@ class RegistrProces:
                 ])
 
         elif res['status'] == 400:
-            names_w_err = res['data']
+            names_w_err = res_data
             step_names = self._get_step_names()
 
             base_set = set(self.reg_blank.keys())
@@ -172,6 +173,17 @@ class RegistrProces:
             text = (self._prior_messages[self.step][0]['text'] + '\n' +
                     self.errors[self.step])
             return self.mess_wrapper(text)
+
+        elif res['status'] == 403:
+            self.is_active = False
+            keyboard = sb.make_welcome_kbd()
+            if isinstance(res_data, str):
+                text = res_data
+            else:
+                text = str(res_data)
+            return self.mess_wrapper(
+                    {'text': text, 'reply_markup': keyboard}
+                    )
 
         elif res['status'] in range(500, 600):
             return self.mess_wrapper(REG_MESSAGE['conection_error'])
