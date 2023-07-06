@@ -77,6 +77,17 @@ def make_inline_buttons_row(datas: list) -> list:
     return buttons
 
 
+def make_resend_btn(obj):
+    callback_data = json.dumps(
+            {'name': 'reg_resend',
+             'id': obj.reg_blank_id}
+        )
+    button = InlineKeyboardButton(
+        text=REG_BUTTONS['reg_resend'],
+        callback_data=callback_data)
+    return InlineKeyboardMarkup().add(button)
+
+
 def races_buttons(races: list, cur_page: int, pages: int = 1):
     datas = []
     for item in races:

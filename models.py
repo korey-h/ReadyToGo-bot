@@ -1,3 +1,6 @@
+import base64
+import hashlib
+
 from typing import List
 
 import message_generators as mg
@@ -32,6 +35,7 @@ class RegistrProces:
             'club': '',
             'town': ''
         }
+        self.reg_blank_id = None
 
     _stop_text = 'to registration'
     _finish_step = 10
@@ -91,6 +95,12 @@ class RegistrProces:
         }
         return validators.get(step)
 
+    def _make_id_for_regblank(self):
+        data = '.'.join([str(val) for val in self.reg_blank.values()])
+        to_hash = data.encode()
+        hs = hashlib.md5(to_hash).digest()
+        return base64.urlsafe_b64encode(hs).decode('ascii').replace('=', '')
+
     def is_act_required(self):
         act = self._get_action(self.step)
         return act['required']
@@ -126,7 +136,7 @@ class RegistrProces:
                 {'text': REG_MESSAGE['reg_inactive'],
                  'reply_markup': sb.make_welcome_kbd()})
 
-        if not self._fix_list:
+        if not self._fix_list and self.step < self._finish_step:
             self.step += 1
         else:
             self.step = self._fix_list.pop()
@@ -139,6 +149,7 @@ class RegistrProces:
         return res
 
     def make_registration(self) -> dict:
+        self.reg_blank_id = self._make_id_for_regblank()
         res = self.reg_sender(self.reg_blank)
         res_data = res.get('data')
         if res['status'] in (200, 201):
@@ -195,10 +206,13 @@ class RegistrProces:
                     )
 
         elif res['status'] in range(500, 600):
-            return self.mess_wrapper(REG_MESSAGE['conection_error'])
-        # TODO: добавить вывод кнопки для повторной отправки заявки.
+            return self.mess_wrapper({
+                'text': REG_MESSAGE['conection_error'],
+                'reply_markup': sb.make_resend_btn(self)})
 
-        return self.mess_wrapper({'text': REG_MESSAGE['unknown_reg_error']})
+        return self.mess_wrapper({
+            'text': REG_MESSAGE['unknown_reg_error'],
+            'reply_markup': sb.make_resend_btn(self)})
 
     def mess_wrapper(self, value) -> List[dict]:
         keyboard = None

@@ -185,7 +185,9 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
         if not is_buttons_alowwed(self_name, data, user):
             return
         data = data['payload'] if 'payload' in data.keys() else data
-    if data is None and user.reg_proces.step > 0:
+    crnt_step = user.reg_proces.step
+    if (data is None and crnt_step > 0 and
+            crnt_step < user.reg_proces._finish_step):
         context = user.reg_proces.pass_step()
     else:
         context = user.reg_proces.exec(data)
@@ -195,12 +197,24 @@ def registration(message, user: User = None, data=None, *args, **kwargs):
     send_multymessage(user.id, context)
 
 
-def force_start(message, user: User, btn_name: str, data: str):
+def force_start(message, user: User, btn_name: str, data: dict):
     data = data['id']
     kwargs = {'from': 'force_start'}
     if btn_name == 'update':
         return reg_update(message, user, data, **kwargs)
     return registration(message, user, data, **kwargs)
+
+
+def repeat_reg_send(message, user: User, data: dict):
+    up_stack = user.get_cmd_stack()
+    if not up_stack or up_stack['cmd_name'] not in (
+            'registration', 'update_registration'):
+        return
+    reg_id = data['id']
+    curr_reg_id = user.reg_proces.reg_blank_id
+    if reg_id != curr_reg_id:
+        return
+    try_exec_stack(message, user, data)
 
 
 @bot.message_handler(commands=[BUTTONS['btn_reg_update']], func=com_logger)
@@ -229,11 +243,12 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
         context = user.reg_proces.repeat_last_step()
         return send_multymessage(user.id, context)
 
+    crnt_step = user.reg_proces.step
     if isinstance(data, dict):
         if not is_buttons_alowwed(self_name, data, user):
             return
         data = data['payload'] if 'payload' in data.keys() else data
-        if data.get('name') == 'category':
+        if data.get('name') in ('category', 'reg_resend'):
             context = user.reg_proces.exec(data)
         else:
             step = data['step']
@@ -242,7 +257,8 @@ def reg_update(message, user: User = None, data=None, *args, **kwargs):
                 context = user.reg_proces.make_registration()
             else:
                 context = user.reg_proces.mess_wrapper(step)
-    elif data is None and user.reg_proces.step > 0:
+    elif (data is None and crnt_step > 0 and
+            crnt_step < user.reg_proces._finish_step):
         context = user.reg_proces.pass_step()
     else:
         context = user.reg_proces.exec(data)
@@ -259,6 +275,7 @@ def save_update(message):
     if up_stack and (
             up_stack['cmd_name'] == 'update_registration' and
             user.reg_proces.race):
+        user.reg_proces.step = user.reg_proces._finish_step
         context = user.reg_proces.make_registration()
         send_multymessage(user.id, context)
         if not user.reg_proces.is_active:
@@ -343,6 +360,8 @@ def inline_keys_exec(call):
     btn_name = data.get('name')
     if btn_name in ('reg_start', 'update'):
         return force_start(message, user, btn_name, data)
+    elif btn_name == 'reg_resend':
+        return repeat_reg_send(message, user, data)
     elif btn_name == 'race_data':
         return about_race(message, user, data)
     try_exec_stack(message, user, data)

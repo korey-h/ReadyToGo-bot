@@ -74,7 +74,7 @@ REG_MESSAGE = {
     'reg_always_on': 'Уже запущена регистрация на "{}".'
                       'Ожидаю ввод данных.',
     'mess_reg_id': 'Введите номер заявки, полученный после регистрации',
-    'mess_data_upd': 'Данные обновлены.',
+    'mess_data_upd': f'Данные обновлены. /{BUTTONS["save_changes"]} ?',
     'mess_select_edit_btn': 'Нажмите на кнопку с данными для их изменения. '
                             'После внесения всех необходимых изменений '
                             'потребуется отправить команду'
@@ -98,13 +98,14 @@ REG_BUTTONS = {
     'pass': 'Пропустить',
     'reg_update': 'Редактировать заявку',
     'reg_start': 'Зарегистрироваться',
+    'reg_resend': 'Повтор отправки',
 
 }
 
 ALLOWED_BUTTONS = {
-    'registration': ['pass', 'category', 'reg_start'],
+    'registration': ['pass', 'category', 'reg_start', 'reg_resend'],
     'show_all_races': ['prev', 'next'],
-    'update_registration': ['reg_upd', 'category'],
+    'update_registration': ['reg_upd', 'category', 'reg_resend'],
 }
 
 
