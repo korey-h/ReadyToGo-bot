@@ -1,0 +1,9 @@
+version: '3.3'
+  
+services:
+      
+  bot:
+    image: readytogo-bot:latest
+    restart: always
+    env_file:
+      - ./.env
