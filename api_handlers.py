@@ -1,8 +1,6 @@
 import requests
 
-from config import PAGE_LIMIT, REG_MESSAGE
-
-HOST = 'http://127.0.0.1:8000/api/v1'
+from config import HOST, PAGE_LIMIT, REG_MESSAGE
 
 
 def data_getter(url, params={}):

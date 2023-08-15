@@ -1,5 +1,13 @@
+import os
+
+from dotenv import load_dotenv
+
+if os.path.exists('.env'):
+    load_dotenv('.env')
+
 PAGE_LIMIT = 10
 DEBUG_MODE = True
+HOST = 'http://' + os.environ.get('HOST') + '/api/v1'
 
 MESSAGES = {
     'welcome':
@@ -13,7 +21,7 @@ MESSAGES = {
     'cmd_always_on': 'Эта команда уже выполняется! Ожидаю ввод данных.',
     'mess_cancel_this': 'Команда "{}" отменена',
     'mess_cancel_all': 'Все процессы прекращены',
-    'mess_finded_races': 'Мероприятия с активной регистрацией'
+    'mess_finded_races': 'Мероприятия с активной регистрацией '
                          '(часть {} из {}).',
     'conection_error': 'Сервер регистрации недоступен. Попробуйте'
                        ' повторить запрос позднее',

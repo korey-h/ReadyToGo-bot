@@ -18,7 +18,8 @@ from models import User
 from utils import com_logger, query_logger, text_logger
 
 
-load_dotenv('.env')
+if os.path.exists('.env'):
+    load_dotenv('.env')
 with open('about.txt', encoding='utf-8') as f:
     ABOUT = f.read()
 
@@ -386,13 +387,13 @@ def err_informer(chat_id):
 
 
 if __name__ == '__main__':
-    # develop_id = os.getenv('DEVELOP_ID')
-    # t1 = threading.Thread(target=err_informer, args=[develop_id])
-    # t1.start()
+    develop_id = os.getenv('DEVELOP_ID')
+    t1 = threading.Thread(target=err_informer, args=[develop_id])
+    t1.start()
     bot.polling(non_stop=True)
-    # while True:
-    #     try:
-    #         bot.polling(non_stop=True)
-    #     except Exception as error:
-    #         err_info = error.__repr__()
-    #         logger.exception(error)
+    while True:
+        try:
+            bot.polling(non_stop=True)
+        except Exception as error:
+            err_info = error.__repr__()
+            logger.exception(error)
