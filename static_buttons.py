@@ -56,14 +56,21 @@ def category_keyboard(obj):
     categories = obj.race['race_categories']
     buttons = []
     for category in categories:
-        text = category['name']
-        callback_data = json.dumps(
-            {'name': 'category',
-             'race_id': obj.race['id'],
-             'cat_id': category['id']}
-        )
-        button = InlineKeyboardButton(text=text, callback_data=callback_data)
-        buttons.append(button)
+        obj_year = obj.reg_blank['year']
+        year_old = category['year_old']
+        year_yang = category['year_yang']
+        ages = range(year_old, year_yang + 1)
+        if obj_year in ages:
+            text = category['name']
+            callback_data = json.dumps(
+                {'name': 'category',
+                 'race_id': obj.race['id'],
+                 'cat_id': category['id']}
+            )
+            button = InlineKeyboardButton(
+                text=text,
+                callback_data=callback_data)
+            buttons.append(button)
     return InlineKeyboardMarkup(row_width=1).add(*buttons)
 
 
