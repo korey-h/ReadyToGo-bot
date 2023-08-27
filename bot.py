@@ -376,6 +376,7 @@ def err_informer(chat_id):
     while True:
         if err_info == '' or err_info == prev_err:
             time.sleep(60)
+            print('!', end=' ')
             continue
         prev_err = err_info
         try:
@@ -390,10 +391,11 @@ if __name__ == '__main__':
     develop_id = os.getenv('DEVELOP_ID')
     t1 = threading.Thread(target=err_informer, args=[develop_id])
     t1.start()
-    bot.polling(non_stop=True)
+
     while True:
         try:
             bot.polling(non_stop=True)
         except Exception as error:
             err_info = error.__repr__()
             logger.exception(error)
+            time.sleep(3)
