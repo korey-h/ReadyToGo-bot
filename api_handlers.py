@@ -17,7 +17,7 @@ def data_getter(url, params={}):
 
 def get_races(page: int = None, limit=PAGE_LIMIT):
     endpoint = '/races/'
-    params = {'page': page, 'limit': limit}
+    params = {'page': page, 'limit': limit, 'active_only': True}
     url = HOST + endpoint
     return data_getter(url, params)
 

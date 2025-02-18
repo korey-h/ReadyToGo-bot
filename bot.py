@@ -133,18 +133,23 @@ def show_all_races(message, user: User = None, data=None, *args, **kwargs):
 
     res = get_races(page=cur_page)
     if res['status'] == 200:
-        page = res['data']
+        keyboard = None
+        page = res['data'] 
         races_list = page['results']
-        pages_am = page['count'] // PAGE_LIMIT + 1
-        if cur_page < pages_am:
-            params = [
-                self_name, show_all_races,
-                {'message': message, 'user': user,
-                 'cur_page': cur_page, 'pages_am': pages_am}
-                ]
-            user.set_cmd_stack(params)
-        text = MESSAGES['mess_finded_races'].format(cur_page, pages_am)
-        keyboard = sb.races_buttons(races_list, cur_page, pages_am)
+        if not races_list:
+            text = MESSAGES['mess_no_act_races']
+        else:
+            pages_am = page['count'] // PAGE_LIMIT
+            pages_am += 1 if page['count'] % PAGE_LIMIT else pages_am
+            if cur_page < pages_am:
+                params = [
+                    self_name, show_all_races,
+                    {'message': message, 'user': user,
+                     'cur_page': cur_page, 'pages_am': pages_am}
+                    ]
+                user.set_cmd_stack(params)
+            text = MESSAGES['mess_finded_races'].format(cur_page, pages_am)
+            keyboard = sb.races_buttons(races_list, cur_page, pages_am)
     else:
         if res['status'] == 404:
             text = MESSAGES['not_found']

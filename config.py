@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 if os.path.exists('.env'):
     load_dotenv('.env')
 
-PAGE_LIMIT = 10
+PAGE_LIMIT = 6
 DEBUG_MODE = True
 HOST = 'http://' + os.environ.get('HOST') + '/api/v1'
 
@@ -23,6 +23,7 @@ MESSAGES = {
     'mess_cancel_all': 'Все процессы прекращены',
     'mess_finded_races': 'Мероприятия с активной регистрацией '
                          '(часть {} из {}).',
+    'mess_no_act_races': 'Мероприятия с активной регистрацией нет.',
     'conection_error': 'Сервер регистрации недоступен. Попробуйте'
                        ' повторить запрос позднее',
     'not_found': 'Информация отсутствует!',
